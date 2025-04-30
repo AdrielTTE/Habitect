@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart'; // For Line Chart
 
 class StreakTracking extends StatefulWidget {
   const StreakTracking({super.key, required this.title});
@@ -10,31 +10,52 @@ class StreakTracking extends StatefulWidget {
   State<StreakTracking> createState() => _StreakTrackingState();
 }
 
-
-//UI
-class _StreakTrackingState extends State<StreakTracking>{
+class _StreakTrackingState extends State<StreakTracking> {
+  String selectedYear = '2024'; // Track the selected year
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Summary'),
-            centerTitle: true,
+        centerTitle: true,
         backgroundColor: Colors.white,
-
-
+        elevation: 0, // Removing shadow for a cleaner look
         actions: [
-          DropdownButton<String>(
-            value: '2024',
-            items: ['2022', '2023', '2024']
-                .map((year) => DropdownMenuItem(
-              value: year,
-              child: Text(year),
-            ))
-                .toList(),
-            onChanged: (value) {
-              // Handle year change
-            },
+          // Year Dropdown with custom styling
+          Container(
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.shade300,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButton<String>(
+              value: selectedYear,
+              items: ['2022', '2023', '2024']
+                  .map((year) => DropdownMenuItem(
+                value: year,
+                child: Text(
+                  year,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+              ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedYear = value!;
+                });
+              },
+              icon: const Icon(
+                Icons.arrow_drop_down,
+                color: Colors.white,
+              ),
+              dropdownColor: Colors.deepPurple.shade300,
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -42,11 +63,11 @@ class _StreakTrackingState extends State<StreakTracking>{
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            // Graph Section
+            // Graph Section (Line Chart)
             Card(
-              elevation: 4,
+              elevation: 6,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -56,22 +77,41 @@ class _StreakTrackingState extends State<StreakTracking>{
                     const Text(
                       'Goals Completed (Jan - Aug)',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Placeholder for Graph
+                    // Line Chart
                     Container(
-                      height: 200,
+                      height: 250,
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Center(
-                        child: Text(
-                          'Graph Placeholder',
-                          style: TextStyle(color: Colors.grey),
+                      child: LineChart(
+                        LineChartData(
+                          gridData: FlGridData(show: true),
+                          titlesData: FlTitlesData(show: true),
+                          borderData: FlBorderData(show: true),
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: [
+                                FlSpot(0, 5),
+                                FlSpot(1, 6),
+                                FlSpot(2, 10),
+                                FlSpot(3, 12),
+                                FlSpot(4, 14),
+                                FlSpot(5, 18),
+                                FlSpot(6, 20),
+                                FlSpot(7, 25),
+                              ],
+                              isCurved: true,
+                              colors: [Colors.deepPurple],
+                              belowBarData: BarAreaData(show: true, colors: [Colors.deepPurple.withOpacity(0.3)]),
+                              barWidth: 4,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -94,6 +134,7 @@ class _StreakTrackingState extends State<StreakTracking>{
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.house), label: 'Summary'),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Learn'),
@@ -104,7 +145,7 @@ class _StreakTrackingState extends State<StreakTracking>{
     );
   }
 
-  // Progress Cards
+  // Goal Progress Cards with better styling
   List<Widget> _buildGoalProgressCards() {
     final goals = [
       {'name': 'Read 10 books', 'progress': 78},
@@ -117,9 +158,9 @@ class _StreakTrackingState extends State<StreakTracking>{
 
     return goals.map((goal) {
       return Card(
-        elevation: 3,
+        elevation: 6,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -128,26 +169,21 @@ class _StreakTrackingState extends State<StreakTracking>{
             children: [
               Text(
                 goal['name'] as String,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 8),
               LinearProgressIndicator(
                 value: (goal['progress'] as int) / 100,
                 color: Colors.blue,
                 backgroundColor: Colors.grey.shade300,
+                minHeight: 10,
               ),
               const SizedBox(height: 4),
-              Text('${goal['progress']}%'),
+              Text('${goal['progress']}%', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
       );
     }).toList();
   }
-  }
-
-  @override
-  State<StatefulWidget> createState() {
-    // TODO: implement createState
-    throw UnimplementedError();
-  }
+}
