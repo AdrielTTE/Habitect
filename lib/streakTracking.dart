@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart'; // For Line Chart
+import 'package:pie_chart/pie_chart.dart'; // Import pie_chart package
 
 class StreakTracking extends StatefulWidget {
   const StreakTracking({super.key, required this.title});
@@ -11,7 +11,9 @@ class StreakTracking extends StatefulWidget {
 }
 
 class _StreakTrackingState extends State<StreakTracking> {
-  String selectedYear = '2024'; // Track the selected year
+  String selectedCategory = 'Goals'; // Default category is 'Goals'
+  String selectedYear = '2024';
+  String selectedMonth = 'January';
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +24,50 @@ class _StreakTrackingState extends State<StreakTracking> {
         backgroundColor: Colors.white,
         elevation: 0, // Removing shadow for a cleaner look
         actions: [
-          // Year Dropdown with custom styling
+          // Multi-Level Dropdown Menu for Category (Goals, To Do, Habits)
           Container(
             margin: const EdgeInsets.all(8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.deepPurple.shade300,
+              color: Colors.orange.shade300, // Change color to match the design
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButton<String>(
+              value: selectedCategory,
+              items: ['Goals', 'To Do', 'Habits']
+                  .map((category) => DropdownMenuItem(
+                value: category,
+                child: Text(
+                  category,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+              ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedCategory = value!;
+                  // Reset year and month on category change
+                  selectedYear = '2024';
+                  selectedMonth = 'January';
+                });
+              },
+              icon: const Icon(
+                Icons.arrow_drop_down,
+                color: Colors.white,
+              ),
+              dropdownColor: Colors.orange.shade300, // Change color
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+          // Year Dropdown
+          Container(
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade200, // Change color to match the design
               borderRadius: BorderRadius.circular(12),
             ),
             child: DropdownButton<String>(
@@ -37,10 +77,7 @@ class _StreakTrackingState extends State<StreakTracking> {
                 value: year,
                 child: Text(
                   year,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
+                  style: const TextStyle(color: Colors.white),
                 ),
               ))
                   .toList(),
@@ -53,7 +90,39 @@ class _StreakTrackingState extends State<StreakTracking> {
                 Icons.arrow_drop_down,
                 color: Colors.white,
               ),
-              dropdownColor: Colors.deepPurple.shade300,
+              dropdownColor: Colors.orange.shade200, // Change color
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+          // Month Dropdown
+          Container(
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade200, // Change color to match the design
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButton<String>(
+              value: selectedMonth,
+              items: ['January', 'February', 'March', 'April', 'May']
+                  .map((month) => DropdownMenuItem(
+                value: month,
+                child: Text(
+                  month,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedMonth = value!;
+                });
+              },
+              icon: const Icon(
+                Icons.arrow_drop_down,
+                color: Colors.white,
+              ),
+              dropdownColor: Colors.orange.shade200, // Change color
               style: const TextStyle(color: Colors.white),
             ),
           ),
@@ -77,41 +146,22 @@ class _StreakTrackingState extends State<StreakTracking> {
                     const Text(
                       'Goals Completed (Jan - Aug)',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Line Chart
+                    // Line Chart Placeholder (use your own graph logic here)
                     Container(
                       height: 250,
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: LineChart(
-                        LineChartData(
-                          gridData: FlGridData(show: true),
-                          titlesData: FlTitlesData(show: true),
-                          borderData: FlBorderData(show: true),
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: [
-                                FlSpot(0, 5),
-                                FlSpot(1, 6),
-                                FlSpot(2, 10),
-                                FlSpot(3, 12),
-                                FlSpot(4, 14),
-                                FlSpot(5, 18),
-                                FlSpot(6, 20),
-                                FlSpot(7, 25),
-                              ],
-                              isCurved: true,
-                              colors: [Colors.deepPurple],
-                              belowBarData: BarAreaData(show: true, colors: [Colors.deepPurple.withOpacity(0.3)]),
-                              barWidth: 4,
-                            ),
-                          ],
+                      child: const Center(
+                        child: Text(
+                          'Graph Placeholder',
+                          style: TextStyle(color: Colors.grey),
                         ),
                       ),
                     ),
@@ -130,6 +180,14 @@ class _StreakTrackingState extends State<StreakTracking> {
             ),
             const SizedBox(height: 10),
             ..._buildGoalProgressCards(),
+            const SizedBox(height: 20),
+            // Priority Chart (Pie Chart using pie_chart package)
+            const Text(
+              'Priority Chart',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            _buildPriorityChart(),
           ],
         ),
       ),
@@ -174,7 +232,7 @@ class _StreakTrackingState extends State<StreakTracking> {
               const SizedBox(height: 8),
               LinearProgressIndicator(
                 value: (goal['progress'] as int) / 100,
-                color: Colors.blue,
+                color: Colors.orange, // Change to orange to match the screenshot
                 backgroundColor: Colors.grey.shade300,
                 minHeight: 10,
               ),
@@ -185,5 +243,24 @@ class _StreakTrackingState extends State<StreakTracking> {
         ),
       );
     }).toList();
+  }
+
+  // Pie Chart for Priority Breakdown (using pie_chart package)
+  Widget _buildPriorityChart() {
+    Map<String, double> data = {
+      'Low Priority': 14.8,
+      'Medium Priority': 19.4,
+      'High Priority': 66.19,
+    };
+
+    return PieChart(
+      dataMap: data,
+      chartType: ChartType.ring,
+      colorList: [Colors.red.shade700, Colors.orange.shade700, Colors.green.shade700], // Adjust colors
+      chartRadius: 150,
+      centerText: "Priority",
+      legendOptions: const LegendOptions(showLegends: true),
+      chartValuesOptions: const ChartValuesOptions(showChartValues: false),
+    );
   }
 }
