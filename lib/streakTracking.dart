@@ -132,62 +132,90 @@ class _StreakTrackingState extends State<StreakTracking> {
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            // Graph Section (Line Chart)
-            Card(
-              elevation: 6,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Goals Completed (Jan - Aug)',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+            // Conditional rendering based on selectedCategory
+            if (selectedCategory == 'Goals')
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Goals Completed (Jan - Aug)',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Graph Section for Goals
+                  Container(
+                    height: 250,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Graph Placeholder', // Replace with actual graph
+                        style: TextStyle(color: Colors.grey),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // Line Chart Placeholder (use your own graph logic here)
-                    Container(
-                      height: 250,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Graph Placeholder',
-                          style: TextStyle(color: Colors.grey),
-                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Most Goals Completed: 5'),
+                  const Text('Average Completed Per Month: 2'),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Goal Progress',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  ..._buildGoalProgressCards(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Priority Chart',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildPriorityChart(),
+                ],
+              ),
+            if (selectedCategory == 'To Do')
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'To Do Completed (Jan - Aug)',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Graph Section for To Do
+                  Container(
+                    height: 250,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Graph Placeholder', // Replace with actual graph
+                        style: TextStyle(color: Colors.grey),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text('Most Goals Completed: 5'),
-                    const Text('Average Completed Per Month: 2'),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Most To Dos Completed: 18'),
+                  const Text('Average Completed Per Week: 9'),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'To Do Progress',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildPriorityChart(),
+                ],
               ),
-            ),
-            const SizedBox(height: 20),
-            // Goal Progress Section
-            const Text(
-              'Goal Progress',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            ..._buildGoalProgressCards(),
-            const SizedBox(height: 20),
-            // Priority Chart (Pie Chart using pie_chart package)
-            const Text(
-              'Priority Chart',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            _buildPriorityChart(),
           ],
         ),
       ),
