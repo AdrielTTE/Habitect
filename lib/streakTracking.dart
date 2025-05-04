@@ -12,210 +12,50 @@ class StreakTracking extends StatefulWidget {
 
 class _StreakTrackingState extends State<StreakTracking> {
   String selectedCategory = 'Goals'; // Default category is 'Goals'
-  String selectedYear = '2024';
-  String selectedMonth = 'January';
+  String selectedYear = '';
+  String selectedMonth = '';
+
+  // Year options
+  List<String> years = ['2022', '2023', '2024', '2025'];
+
+  // Month options
+  List<String> months = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+    'September', 'October', 'November', 'December'
+  ];
+
+  // Get the current date and month
+  DateTime currentDate = DateTime.now();
+  int currentMonth = DateTime.now().month;
+  int currentYear = DateTime.now().year;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Automatically set the selected year and month based on the system date
+    selectedYear = currentYear.toString();
+    selectedMonth = months[currentMonth - 1]; // Month is 1-based, list is 0-based
+  }
 
   @override
   Widget build(BuildContext context) {
+    Color dropdownColor = Colors.orange.shade300; // Set consistent color for all dropdowns
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Summary'),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0, // Removing shadow for a cleaner look
-        actions: [
-          // Multi-Level Dropdown Menu for Category (Goals, To Do, Habits)
-          Container(
-            margin: const EdgeInsets.all(8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade300, // Change color to match the design
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButton<String>(
-              value: selectedCategory,
-              items: ['Goals', 'To Do', 'Habits']
-                  .map((category) => DropdownMenuItem(
-                value: category,
-                child: Text(
-                  category,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
-                ),
-              ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedCategory = value!;
-                  // Reset year and month on category change
-                  selectedYear = '2024';
-                  selectedMonth = 'January';
-                });
-              },
-              icon: const Icon(
-                Icons.arrow_drop_down,
-                color: Colors.white,
-              ),
-              dropdownColor: Colors.orange.shade300, // Change color
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-          // Year Dropdown
-          Container(
-            margin: const EdgeInsets.all(8),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade200, // Change color to match the design
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButton<String>(
-              value: selectedYear,
-              items: ['2022', '2023', '2024']
-                  .map((year) => DropdownMenuItem(
-                value: year,
-                child: Text(
-                  year,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedYear = value!;
-                });
-              },
-              icon: const Icon(
-                Icons.arrow_drop_down,
-                color: Colors.white,
-              ),
-              dropdownColor: Colors.orange.shade200, // Change color
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-          // Month Dropdown
-          Container(
-            margin: const EdgeInsets.all(8),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade200, // Change color to match the design
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButton<String>(
-              value: selectedMonth,
-              items: ['January', 'February', 'March', 'April', 'May']
-                  .map((month) => DropdownMenuItem(
-                value: month,
-                child: Text(
-                  month,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedMonth = value!;
-                });
-              },
-              icon: const Icon(
-                Icons.arrow_drop_down,
-                color: Colors.white,
-              ),
-              dropdownColor: Colors.orange.shade200, // Change color
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
-      body: Padding(
+      body: SingleChildScrollView( // Wrap the content in SingleChildScrollView
         padding: const EdgeInsets.all(16.0),
-        child: ListView(
+        child: Column(
           children: [
-            // Conditional rendering based on selectedCategory
-            if (selectedCategory == 'Goals')
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Goals Completed (Jan - Aug)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Graph Section for Goals
-                  Container(
-                    height: 250,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Graph Placeholder', // Replace with actual graph
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Most Goals Completed: 5'),
-                  const Text('Average Completed Per Month: 2'),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Goal Progress',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  ..._buildGoalProgressCards(),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Priority Chart',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildPriorityChart(),
-                ],
-              ),
-            if (selectedCategory == 'To Do')
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'To Do Completed (Jan - Aug)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Graph Section for To Do
-                  Container(
-                    height: 250,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Graph Placeholder', // Replace with actual graph
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Most To Dos Completed: 18'),
-                  const Text('Average Completed Per Week: 9'),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'To Do Progress',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildPriorityChart(),
-                ],
-              ),
+            const SizedBox(height: 16), // Spacing between the title and dropdowns
+            _buildCategoryYearMonthDropdowns(dropdownColor),
+            _buildCategoryContent(),
           ],
         ),
       ),
@@ -227,6 +67,142 @@ class _StreakTrackingState extends State<StreakTracking> {
           BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Community'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
+      ),
+    );
+  }
+
+  // Build Dropdowns for Category, Year, and Month
+  Widget _buildCategoryYearMonthDropdowns(Color dropdownColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        _buildDropdown<String>(
+          value: selectedCategory,
+          items: ['Goals', 'To Do'],
+          onChanged: (value) {
+            setState(() {
+              selectedCategory = value!;
+              selectedYear = currentYear.toString();
+              selectedMonth = months[currentMonth - 1];
+            });
+          },
+          dropdownColor: dropdownColor,
+        ),
+        _buildDropdown<String>(
+          value: selectedYear,
+          items: years,
+          onChanged: (value) {
+            setState(() {
+              selectedYear = value!;
+              selectedMonth = 'January';
+            });
+          },
+          dropdownColor: dropdownColor,
+        ),
+        _buildDropdown<String>(
+          value: selectedMonth,
+          items: _getAvailableMonths(),
+          onChanged: (value) {
+            setState(() {
+              selectedMonth = value!;
+            });
+          },
+          dropdownColor: dropdownColor,
+        ),
+      ],
+    );
+  }
+
+  // Build a Dropdown for Category, Year, or Month
+  Widget _buildDropdown<T>({
+    required T value,
+    required List<String> items,
+    required ValueChanged<T?> onChanged,
+    required Color dropdownColor,
+  }) {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: dropdownColor, // Use the same color for all dropdowns
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButton<T>(
+        value: value,
+        items: items
+            .map((item) => DropdownMenuItem<T>(
+          value: item as T,
+          child: Text(item, style: const TextStyle(color: Colors.white)),
+        ))
+            .toList(),
+        onChanged: onChanged,
+        icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+        dropdownColor: dropdownColor, // Make sure dropdown background color matches
+        style: const TextStyle(color: Colors.white),
+      ),
+    );
+  }
+
+  // Content based on the selected category (Goals or To Do)
+  Widget _buildCategoryContent() {
+    if (selectedCategory == 'Goals') {
+      return _buildGoalsContent();
+    }
+    return _buildToDoContent();
+  }
+
+  // Goals content
+  Widget _buildGoalsContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Goals Completed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        _buildGraphSection(),
+        const SizedBox(height: 8),
+        const Text('Most Goals Completed: 5'),
+        const Text('Average Completed Per Month: 2'),
+        const SizedBox(height: 20),
+        const Text('Goal Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        ..._buildGoalProgressCards(),
+        const SizedBox(height: 20),
+        const Text('Priority Chart', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        _buildPriorityChart(),
+      ],
+    );
+  }
+
+  // To Do content
+  Widget _buildToDoContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('To Do Completed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        _buildGraphSection(),
+        const SizedBox(height: 8),
+        const Text('Most To Dos Completed: 18'),
+        const Text('Average Completed Per Week: 9'),
+        const SizedBox(height: 20),
+        const Text('To Do Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        _buildPriorityChart(),
+      ],
+    );
+  }
+
+  // Graph Section for Goals and To Do
+  Widget _buildGraphSection() {
+    return Container(
+      height: 250,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: Text('Graph Placeholder', style: TextStyle(color: Colors.grey)),
       ),
     );
   }
@@ -253,14 +229,11 @@ class _StreakTrackingState extends State<StreakTracking> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                goal['name'] as String,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+              Text(goal['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
               LinearProgressIndicator(
                 value: (goal['progress'] as int) / 100,
-                color: Colors.orange, // Change to orange to match the screenshot
+                color: Colors.orange,
                 backgroundColor: Colors.grey.shade300,
                 minHeight: 10,
               ),
@@ -284,11 +257,22 @@ class _StreakTrackingState extends State<StreakTracking> {
     return PieChart(
       dataMap: data,
       chartType: ChartType.ring,
-      colorList: [Colors.red.shade700, Colors.orange.shade700, Colors.green.shade700], // Adjust colors
+      colorList: [Colors.red.shade700, Colors.orange.shade700, Colors.green.shade700],
       chartRadius: 150,
       centerText: "Priority",
       legendOptions: const LegendOptions(showLegends: true),
       chartValuesOptions: const ChartValuesOptions(showChartValues: false),
     );
+  }
+
+  // Get available months based on the current year and month
+  List<String> _getAvailableMonths() {
+    List<String> availableMonths = months;
+
+    if (int.parse(selectedYear) == currentYear) {
+      availableMonths = months.sublist(0, currentMonth);
+    }
+
+    return availableMonths;
   }
 }
