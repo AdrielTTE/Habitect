@@ -109,11 +109,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return firstDayOfWeek.add(Duration(days: index));
     });
 
-    List<String> monthNames = [
+
+    List<String> monthsNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    String headerMonth = monthNames[firstDayOfWeek.month - 1];
+
+    String headerMonth = monthsNames[firstDayOfWeek.month - 1];
     int headerYear = firstDayOfWeek.year;
 
     return Padding(
@@ -123,24 +125,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
           const SizedBox(height: 16),
           Text(
             '$headerMonth $headerYear',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18,fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Container(width: 50),
+              Container(width: 50, child: Text("")),
               Expanded(
                 child: Row(
                   children: daysOfWeek.map((day) {
-                    String weekday = weekDays[day.weekday % 7];
+                    String weekday = weekDays[day.weekday % 7]; //Start from sunday
                     return Expanded(
                       child: Center(
                         child: Column(
                           children: [
                             Text('${day.day}', style: TextStyle(fontWeight: FontWeight.bold)),
                             SizedBox(height: 4),
-                            Text(weekday, style: TextStyle(fontSize: 12)),
-                            SizedBox(height: 4),
+                            Text(weekday,style: TextStyle(fontSize: 12)),
                             Container(
                               height: 4,
                               width: 4,
@@ -158,7 +159,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Expanded(
             child: ListView.builder(
               itemCount: timeSlots.length,
@@ -208,16 +209,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget buildDayView() {
     DateTime displayDay = _focusedDay;
-    String weekday = weekDays[displayDay.weekday % 7];
-    List<String> monthNames = [
+    String weekday = weekDays[displayDay.weekday % 7]; // Adjust for Sunday start
+    //String month =  _focusedDay.month == 2 ? 'Februry' : '';  // You can expand this with a full month lists
+
+    List<String> monthsNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    String month = monthNames[_focusedDay.month - 1];
+    String month = monthsNames[_focusedDay.month - 1];
+
+
+    //months[displayDay.month - 1]; // Get month name
 
     return Column(
       children: [
         const SizedBox(height: 16),
+
+        // Month & Navigation
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -255,7 +263,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ],
         ),
+
         const Divider(),
+
+        // Scrollable Time Grid
         Expanded(
           child: ListView.builder(
             itemCount: timeSlots.length,
@@ -284,4 +295,5 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ],
     );
   }
+
 }
