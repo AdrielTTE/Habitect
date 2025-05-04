@@ -1,77 +1,52 @@
 import 'package:flutter/material.dart';
 import 'schedule_page.dart';
 import 'calendar_page.dart';
+import 'package:habitect/Screens/Welcome/welcome_screen.dart';
+import 'package:habitect/constants.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
-  runApp(MyScheduleApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase
+  runApp(const MyApp());
 }
 
-class MyScheduleApp extends StatelessWidget {
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomeScreen(),
-    );
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 1;             // Default on Calendar
-
-  final List<Widget> _pages = [
-    SchedulePage(),
-    CalendarScreen(),
-    Placeholder(), // For Streak (you can create separate page later)
-    Placeholder(), // For Account
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_selectedIndex],
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.orange.shade100,
-        onPressed: () {},
-        child: Icon(Icons.add, color: Colors.black),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        shape: CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                  icon: Icon(Icons.home, color: _selectedIndex == 0 ? Colors.orange : Colors.grey),
-                  onPressed: () => _onItemTapped(0)),
-              IconButton(
-                  icon: Icon(Icons.calendar_today, color: _selectedIndex == 1 ? Colors.orange : Colors.grey),
-                  onPressed: () => _onItemTapped(1)),
-              SizedBox(width: 40), // space for FAB
-              IconButton(
-                  icon: Icon(Icons.show_chart, color: _selectedIndex == 2 ? Colors.orange : Colors.grey),
-                  onPressed: () => _onItemTapped(2)),
-              IconButton(
-                  icon: Icon(Icons.person, color: _selectedIndex == 3 ? Colors.orange : Colors.grey),
-                  onPressed: () => _onItemTapped(3)),
-            ],
+      title: 'Flutter Auth',
+      theme: ThemeData(
+          primaryColor: kPrimaryColor,
+          scaffoldBackgroundColor: Colors.white,
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 0,
+              foregroundColor: Colors.white,
+              backgroundColor: kPrimaryColor,
+              shape: const StadiumBorder(),
+              maximumSize: const Size(double.infinity, 56),
+              minimumSize: const Size(double.infinity, 56),
+            ),
           ),
-        ),
-      ),
+          inputDecorationTheme: const InputDecorationTheme(
+            filled: true,
+            fillColor: kPrimaryLightColor,
+            iconColor: kPrimaryColor,
+            prefixIconColor: kPrimaryColor,
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: defaultPadding, vertical: defaultPadding),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(30)),
+              borderSide: BorderSide.none,
+            ),
+          )),
+      home: const WelcomeScreen(),
     );
   }
 }
