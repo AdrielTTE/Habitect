@@ -1,7 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'schedule_page.dart';
-import 'calendar_page.dart';
 import 'package:habitect/Screens/Welcome/welcome_screen.dart';
 import 'package:habitect/constants.dart';
 import 'package:firebase_core/firebase_core.dart';
