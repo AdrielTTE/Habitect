@@ -65,28 +65,43 @@ class _SignUpFormState extends State<SignUpForm> {
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(hintText: 'Your email'),
+            decoration: const InputDecoration(
+                hintText: 'Your email',
+                filled: true,
+                fillColor: Color(0x4DFFB84D)),
             validator: (email) {
               if (email == null || email.isEmpty || !email.contains('@')) {
                 return 'Please enter a valid email';
               }
               return null;
             },
+
           ),
+          SizedBox(height:20),
           TextFormField(
             controller: _passwordController,
             obscureText: true,
-            decoration: const InputDecoration(hintText: 'Your password'),
+            decoration: const InputDecoration(
+                hintText: 'Your password',
+            filled: true,
+            fillColor: Color(0x4DFFB84D)),
             validator: (password) {
               if (password == null || password.length < 6) {
                 return 'Password must be at least 6 characters';
               }
               return null;
             },
+
+
           ),
+          SizedBox(height:40),
           ElevatedButton(
             onPressed: _isLoading ? null : _signUp, // Disable if loading
             child: _isLoading ? const CircularProgressIndicator() : const Text('Sign Up'),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.all(Colors.orangeAccent),
+            ),
+
           ),
           if (_errorMessage.isNotEmpty)
             Text(

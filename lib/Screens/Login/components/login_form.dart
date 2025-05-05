@@ -55,7 +55,9 @@ class _LoginFormState extends State<LoginForm> {
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(hintText: 'Email'),
+            decoration: const InputDecoration(hintText: 'Email',
+                filled: true,
+                fillColor: Color(0x4DFFB84D)),
             validator: (email) {
               if (email == null || email.isEmpty || !email.contains('@')) {
                 return 'Please enter a valid email';
@@ -63,10 +65,13 @@ class _LoginFormState extends State<LoginForm> {
               return null;
             },
           ),
+          SizedBox(height:20),
           TextFormField(
             controller: _passwordController,
             obscureText: true,
-            decoration: const InputDecoration(hintText: 'Password'),
+            decoration: const InputDecoration(hintText: 'Password',
+                filled: true,
+                fillColor: Color(0x4DFFB84D)),
             validator: (password) {
               if (password == null || password.length < 6) {
                 return 'Password must be at least 6 characters';
@@ -74,9 +79,13 @@ class _LoginFormState extends State<LoginForm> {
               return null;
             },
           ),
+          SizedBox(height:40),
           ElevatedButton(
             onPressed: _login,
             child: const Text('Login'),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.all(Colors.orangeAccent),
+            ),
           ),
           if (_errorMessage.isNotEmpty)
             Text(
