@@ -16,6 +16,7 @@ class _StreakTrackingState extends State<StreakTracking> {
   String selectedCategory = 'Goals'; // Default category is 'Goals'
   String selectedYear = '';
   String selectedMonth = '';
+  String monthNumber = '';
 
   // Year options
   List<String> years = ['2022', '2023', '2024', '2025'];
@@ -37,11 +38,15 @@ class _StreakTrackingState extends State<StreakTracking> {
   // Counts for completed and incomplete tasks
   int doneCount = 0;
   int notDoneCount = 0;
+  int goalCount = 0;
 
   // For storing goal progress
   int dailyCount = 0;
   int monthlyCount = 0;
   int weeklyCount = 0;
+
+  // To store task completion by hour (heatmap data)
+  Map<int, int> taskHours = {};
 
   @override
   void initState() {
@@ -51,6 +56,49 @@ class _StreakTrackingState extends State<StreakTracking> {
     selectedYear = currentYear.toString();
     selectedMonth = months[currentMonth - 1]; // Month is 1-based, list is 0-based
 
+    switch (selectedMonth) {
+      case 'January':
+        monthNumber = '1';
+        break;
+      case 'February':
+        monthNumber = '2';
+        break;
+      case 'March':
+        monthNumber = '3';
+        break;
+      case 'April':
+        monthNumber = '4';
+        break;
+      case 'May':
+        monthNumber = '5';
+        break;
+      case 'June':
+        monthNumber = '6';
+        break;
+      case 'July':
+        monthNumber = '7';
+        break;
+      case 'August':
+        monthNumber = '8';
+        break;
+      case 'September':
+        monthNumber = '9';
+        break;
+      case 'October':
+        monthNumber = '10';
+        break;
+      case 'November':
+        monthNumber = '11';
+        break;
+      case 'December':
+        monthNumber = '12';
+        break;
+      default:
+      // Return -1 if the month is invalid
+        monthNumber = '-1';
+        break;
+    }
+
     // Fetch the "To Do" tasks when the screen is initialized
     if (selectedCategory == 'To Do') {
       _fetchToDoTasks();
@@ -59,33 +107,41 @@ class _StreakTrackingState extends State<StreakTracking> {
     }
   }
 
-  // Fetch "Goals" data from Firestore
   void _fetchGoalsData() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Fetch goals from Firestore based on frequency
+        // Fetch goals from Firestore without any date constraints
         QuerySnapshot querySnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
-            .collection('goals')
-            .where('startDate', isGreaterThanOrEqualTo: selectedMonth)
-            .get();
+            .collection('tasks')
+            .get();  // Fetching all tasks for now
 
         setState(() {
           // Reset counts for categories
           dailyCount = 0;
           monthlyCount = 0;
           weeklyCount = 0;
+          goalCount = querySnapshot.docs.length; // Count the total number of goals
 
           // Calculate the goal progress based on frequency
           querySnapshot.docs.forEach((doc) {
-            if (doc['frequency'] == 'Daily') {
-              dailyCount++;
-            } else if (doc['frequency'] == 'Monthly') {
-              monthlyCount++;
-            } else if (doc['frequency'] == 'Weekly') {
-              weeklyCount++;
+            // Check if 'frequency' is a map and get the 'type' field
+            var frequency = doc['frequency'];
+
+            if (frequency is Map && frequency.containsKey('type')) {
+              // Access the 'type' field inside the map
+              String frequencyType = frequency['type'];
+
+              // Count based on frequency
+              if (frequencyType == 'Daily') {
+                dailyCount++;
+              } else if (frequencyType == 'Monthly') {
+                monthlyCount++;
+              } else if (frequencyType == 'Weekly') {
+                weeklyCount++;
+              }
             }
           });
         });
@@ -115,10 +171,21 @@ class _StreakTrackingState extends State<StreakTracking> {
           // Recalculate the counts every time we fetch the tasks
           doneCount = _todoTasks.where((task) => task['isDon'] == true).length;
           notDoneCount = _todoTasks.where((task) => task['isDon'] == false).length;
-        });
 
-        // For debugging
-        print("Fetched To Do Tasks: $_todoTasks");
+          // Initialize the taskHours map to track tasks per hour
+          taskHours.clear();
+          _todoTasks.forEach((task) {
+            String timeString = task['time'] ?? ''; // Assuming it's in the format "HH:mm"
+            if (timeString.isNotEmpty) {
+              // Validate and extract the hour part from time (e.g., "13:30" -> 13)
+              int hour = int.tryParse(timeString.split(':')[0]) ?? 0;
+              if (hour >= 0 && hour < 24) {
+                // Increment the task count for the respective hour
+                taskHours[hour] = (taskHours[hour] ?? 0) + 1;
+              }
+            }
+          });
+        });
       }
     } catch (e) {
       print("Error fetching To Do tasks: $e");
@@ -146,15 +213,6 @@ class _StreakTrackingState extends State<StreakTracking> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.house), label: 'Summary'),
-          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Learn'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Community'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
-      ),
     );
   }
 
@@ -166,6 +224,7 @@ class _StreakTrackingState extends State<StreakTracking> {
         _buildDropdown<String>(
           value: selectedCategory,
           items: ['Goals', 'To Do'],
+
           onChanged: (value) {
             setState(() {
               selectedCategory = value!;
@@ -180,7 +239,9 @@ class _StreakTrackingState extends State<StreakTracking> {
             }
           },
           dropdownColor: dropdownColor,
+
         ),
+        /*
         _buildDropdown<String>(
           value: selectedYear,
           items: years,
@@ -213,7 +274,7 @@ class _StreakTrackingState extends State<StreakTracking> {
             }
           },
           dropdownColor: dropdownColor,
-        ),
+        ),*/
       ],
     );
   }
@@ -250,51 +311,128 @@ class _StreakTrackingState extends State<StreakTracking> {
 
   // Content based on the selected category (Goals or To Do)
   Widget _buildCategoryContent() {
-    if (selectedCategory == 'Goals') {
-      return _buildGoalsContent();
+    if (selectedCategory == 'To Do') {
+      //To remove
+
     }
-    return _buildToDoContent();
+    return _buildGoalsContent();
   }
+
+  Widget _buildGraphSection() {
+    if (selectedCategory == 'To Do') {
+      // This section is for the "To Do" pie chart
+      return Container(
+        height: 350,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: PieChart(
+          dataMap: {
+            "Completed": doneCount.toDouble(),
+            "Incomplete": notDoneCount.toDouble(),
+          },
+          chartType: ChartType.ring,
+          colorList: [Colors.green, Colors.red], // Completed in green, Incomplete in red
+          chartRadius: 200,
+          centerText: "Task Progress",
+          centerTextStyle: TextStyle(
+            fontSize: 24,
+            color: Colors.black,
+          ),
+          legendOptions: const LegendOptions(showLegends: true,
+              legendTextStyle: TextStyle(
+                fontSize:18,
+              )),
+          chartValuesOptions: const ChartValuesOptions(showChartValues: false),
+        ),
+      );
+    } else {
+      // This section is for the "Goals" pie chart
+      return Container(
+        height: 350,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: PieChart(
+          dataMap: {
+            "Daily": dailyCount.toDouble(),
+            "Monthly": monthlyCount.toDouble(),
+            "Weekly": weeklyCount.toDouble(),
+          },
+          chartType: ChartType.ring,
+          colorList: [Colors.orange, Colors.blue, Colors.green],
+          chartRadius: 200,
+          centerText: "Goal Progress",
+          centerTextStyle: TextStyle(
+              fontSize: 24,
+              color: Colors.black,
+          ),
+          legendOptions: const LegendOptions(
+              showLegends: true,
+            legendTextStyle: TextStyle(
+              fontSize:18,
+            )
+          ),
+
+          chartValuesOptions: const ChartValuesOptions(showChartValues: false),
+        ),
+      );
+    }
+  }
+
 
   // Goals content
   Widget _buildGoalsContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Goals Completed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        _buildGraphSection(),
-        const SizedBox(height: 8),
-        Text('Most Goals Completed: $doneCount'),
-        const SizedBox(height: 20),
-        const Text('Goal Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        const SizedBox(height: 20),
-        const Text('Priority Chart', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-      ],
-    );
+    if(selectedCategory=='Goals'){
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height:20),
+          const Text('Goals Summary', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          _buildGraphSection(),
+          const SizedBox(height: 20),
+          Text('Number of Goals Completed: 0',
+            style: TextStyle(fontSize: 20),),
+          SizedBox(height: 20),
+          Text('Number of Current Goals: $goalCount',
+            style: TextStyle(fontSize: 20),),
+          const SizedBox(height: 20),
+          const Text('Goal Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          const SizedBox(height: 20),
+          const SizedBox(height: 20),
+          const SizedBox(height: 10),
+        ],
+      );
+    } else{
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height:20),
+          const Text('To Dos Summary', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          _buildGraphSection(),
+          const SizedBox(height: 20),
+          Text('Number of Incompleted To Dos: $notDoneCount',
+            style: TextStyle(fontSize: 20),),
+          SizedBox(height: 20),
+          Text('Number of Completed To Dos: $doneCount',
+            style: TextStyle(fontSize: 20),),
+          const SizedBox(height: 20),
+          const Text('To Do Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          const SizedBox(height: 20),
+          const SizedBox(height: 20),
+          const SizedBox(height: 10),
+        ],
+      );
+    }
+
   }
 
-  // To Do content (Display the To Do tasks here)
-  Widget _buildToDoContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('To Do Completed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        _buildGraphSection(),
-        const SizedBox(height: 8),
-        // Display dynamic count of completed and not completed tasks
-        Text('Number of To Dos Completed: $doneCount'),
-        Text('Number of To Dos Incompleted: $notDoneCount'),
-        const SizedBox(height: 20),
-        const Text('To Do List', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        _buildToDoList(),
-      ],
-    );
-  }
 
   // Build the To Do list
   Widget _buildToDoList() {
@@ -322,26 +460,34 @@ class _StreakTrackingState extends State<StreakTracking> {
     );
   }
 
-  // Graph Section for Goals and To Do
-  Widget _buildGraphSection() {
+  // Build the heatmap for task times
+  Widget _buildHeatmap() {
     return Container(
       height: 250,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: PieChart(
-        dataMap: {
-          "Daily": dailyCount.toDouble(),
-          "Monthly": monthlyCount.toDouble(),
-          "Weekly": weeklyCount.toDouble(),
+      child: GridView.builder(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 24, // Represent each hour of the day
+          childAspectRatio: 1.0,
+        ),
+        itemCount: 24,
+        itemBuilder: (context, index) {
+          // Get task count for each hour
+          int taskCount = taskHours[index] ?? 0;
+
+          return Container(
+            margin: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: taskCount > 0 ? Colors.green.withOpacity(taskCount / 5) : Colors.grey,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                '$taskCount',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
         },
-        chartType: ChartType.ring,
-        colorList: [Colors.orange, Colors.blue, Colors.green], // Updated colors
-        chartRadius: 150,
-        centerText: "Goal Progress",
-        legendOptions: const LegendOptions(showLegends: true),
-        chartValuesOptions: const ChartValuesOptions(showChartValues: false), // Remove numbers on Pie chart
       ),
     );
   }
