@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pie_chart/pie_chart.dart'; // Import pie_chart package
 
 class StreakTracking extends StatefulWidget {
@@ -29,6 +31,18 @@ class _StreakTrackingState extends State<StreakTracking> {
   int currentMonth = DateTime.now().month;
   int currentYear = DateTime.now().year;
 
+  // List to store the "To Do" tasks
+  List<Map<String, dynamic>> _todoTasks = [];
+
+  // Counts for completed and incomplete tasks
+  int doneCount = 0;
+  int notDoneCount = 0;
+
+  // For storing goal progress
+  int dailyCount = 0;
+  int monthlyCount = 0;
+  int weeklyCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +50,79 @@ class _StreakTrackingState extends State<StreakTracking> {
     // Automatically set the selected year and month based on the system date
     selectedYear = currentYear.toString();
     selectedMonth = months[currentMonth - 1]; // Month is 1-based, list is 0-based
+
+    // Fetch the "To Do" tasks when the screen is initialized
+    if (selectedCategory == 'To Do') {
+      _fetchToDoTasks();
+    } else {
+      _fetchGoalsData();
+    }
+  }
+
+  // Fetch "Goals" data from Firestore
+  void _fetchGoalsData() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Fetch goals from Firestore based on frequency
+        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('goals')
+            .where('startDate', isGreaterThanOrEqualTo: selectedMonth)
+            .get();
+
+        setState(() {
+          // Reset counts for categories
+          dailyCount = 0;
+          monthlyCount = 0;
+          weeklyCount = 0;
+
+          // Calculate the goal progress based on frequency
+          querySnapshot.docs.forEach((doc) {
+            if (doc['frequency'] == 'Daily') {
+              dailyCount++;
+            } else if (doc['frequency'] == 'Monthly') {
+              monthlyCount++;
+            } else if (doc['frequency'] == 'Weekly') {
+              weeklyCount++;
+            }
+          });
+        });
+      }
+    } catch (e) {
+      print("Error fetching Goals: $e");
+    }
+  }
+
+  // Fetch "To Do" tasks from Firestore
+  void _fetchToDoTasks() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Fetch tasks from Firestore
+        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notes')
+            .get();
+
+        setState(() {
+          _todoTasks = querySnapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+
+          // Recalculate the counts every time we fetch the tasks
+          doneCount = _todoTasks.where((task) => task['isDon'] == true).length;
+          notDoneCount = _todoTasks.where((task) => task['isDon'] == false).length;
+        });
+
+        // For debugging
+        print("Fetched To Do Tasks: $_todoTasks");
+      }
+    } catch (e) {
+      print("Error fetching To Do tasks: $e");
+    }
   }
 
   @override
@@ -85,6 +172,12 @@ class _StreakTrackingState extends State<StreakTracking> {
               selectedYear = currentYear.toString();
               selectedMonth = months[currentMonth - 1];
             });
+            // Fetch "To Do" tasks when category is switched to 'To Do'
+            if (selectedCategory == 'To Do') {
+              _fetchToDoTasks();
+            } else {
+              _fetchGoalsData();
+            }
           },
           dropdownColor: dropdownColor,
         ),
@@ -96,6 +189,12 @@ class _StreakTrackingState extends State<StreakTracking> {
               selectedYear = value!;
               selectedMonth = 'January';
             });
+            // Fetch tasks based on the selected year
+            if (selectedCategory == 'To Do') {
+              _fetchToDoTasks();
+            } else {
+              _fetchGoalsData();
+            }
           },
           dropdownColor: dropdownColor,
         ),
@@ -106,6 +205,12 @@ class _StreakTrackingState extends State<StreakTracking> {
             setState(() {
               selectedMonth = value!;
             });
+            // Fetch tasks again based on the selected month
+            if (selectedCategory == 'To Do') {
+              _fetchToDoTasks();
+            } else {
+              _fetchGoalsData();
+            }
           },
           dropdownColor: dropdownColor,
         ),
@@ -160,21 +265,18 @@ class _StreakTrackingState extends State<StreakTracking> {
         const SizedBox(height: 16),
         _buildGraphSection(),
         const SizedBox(height: 8),
-        const Text('Most Goals Completed: 5'),
-        const Text('Average Completed Per Month: 2'),
+        Text('Most Goals Completed: $doneCount'),
         const SizedBox(height: 20),
         const Text('Goal Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-        ..._buildGoalProgressCards(),
         const SizedBox(height: 20),
         const Text('Priority Chart', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-        _buildPriorityChart(),
       ],
     );
   }
 
-  // To Do content
+  // To Do content (Display the To Do tasks here)
   Widget _buildToDoContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,13 +285,40 @@ class _StreakTrackingState extends State<StreakTracking> {
         const SizedBox(height: 16),
         _buildGraphSection(),
         const SizedBox(height: 8),
-        const Text('Most To Dos Completed: 18'),
-        const Text('Average Completed Per Week: 9'),
+        // Display dynamic count of completed and not completed tasks
+        Text('Number of To Dos Completed: $doneCount'),
+        Text('Number of To Dos Incompleted: $notDoneCount'),
         const SizedBox(height: 20),
-        const Text('To Do Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text('To Do List', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-        _buildPriorityChart(),
+        _buildToDoList(),
       ],
+    );
+  }
+
+  // Build the To Do list
+  Widget _buildToDoList() {
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: _todoTasks.length,
+      itemBuilder: (context, index) {
+        var task = _todoTasks[index];
+        return Card(
+          elevation: 4,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            title: Text(task['title'] ?? 'No Title'),
+            subtitle: Text(task['subtitle'] ?? 'No Subtitle'),
+            trailing: Icon(
+              task['isDon'] ? Icons.check_box : Icons.check_box_outline_blank,
+              color: task['isDon'] ? Colors.green : Colors.grey,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -201,67 +330,19 @@ class _StreakTrackingState extends State<StreakTracking> {
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Center(
-        child: Text('Graph Placeholder', style: TextStyle(color: Colors.grey)),
+      child: PieChart(
+        dataMap: {
+          "Daily": dailyCount.toDouble(),
+          "Monthly": monthlyCount.toDouble(),
+          "Weekly": weeklyCount.toDouble(),
+        },
+        chartType: ChartType.ring,
+        colorList: [Colors.orange, Colors.blue, Colors.green], // Updated colors
+        chartRadius: 150,
+        centerText: "Goal Progress",
+        legendOptions: const LegendOptions(showLegends: true),
+        chartValuesOptions: const ChartValuesOptions(showChartValues: false), // Remove numbers on Pie chart
       ),
-    );
-  }
-
-  // Goal Progress Cards with better styling
-  List<Widget> _buildGoalProgressCards() {
-    final goals = [
-      {'name': 'Read 10 books', 'progress': 78},
-      {'name': 'Lose 5kg', 'progress': 74},
-      {'name': 'Write a research thesis', 'progress': 71},
-      {'name': 'Run 100KM', 'progress': 54},
-      {'name': 'Get Cisco CCNA certification', 'progress': 47},
-      {'name': 'Travel to 5 countries', 'progress': 27},
-    ];
-
-    return goals.map((goal) {
-      return Card(
-        elevation: 6,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(goal['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: (goal['progress'] as int) / 100,
-                color: Colors.orange,
-                backgroundColor: Colors.grey.shade300,
-                minHeight: 10,
-              ),
-              const SizedBox(height: 4),
-              Text('${goal['progress']}%', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-      );
-    }).toList();
-  }
-
-  // Pie Chart for Priority Breakdown (using pie_chart package)
-  Widget _buildPriorityChart() {
-    Map<String, double> data = {
-      'Low Priority': 14.8,
-      'Medium Priority': 19.4,
-      'High Priority': 66.19,
-    };
-
-    return PieChart(
-      dataMap: data,
-      chartType: ChartType.ring,
-      colorList: [Colors.red.shade700, Colors.orange.shade700, Colors.green.shade700],
-      chartRadius: 150,
-      centerText: "Priority",
-      legendOptions: const LegendOptions(showLegends: true),
-      chartValuesOptions: const ChartValuesOptions(showChartValues: false),
     );
   }
 
