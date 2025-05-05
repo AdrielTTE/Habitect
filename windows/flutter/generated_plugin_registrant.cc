@@ -12,6 +12,7 @@
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   FirebaseAuthPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FirebaseAuthPluginCApi"));
+
   FirebaseCorePluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FirebaseCorePluginCApi"));
 }
