@@ -41,6 +41,8 @@ dependencies:
   flutter_svg: ^1.0.3
   fl_chart: ^0.40.0
   percent_indicator: ^4.0.0
+  image_picker: ^0.8.5+3
+  firebase_storage: ^12.4.5
 
 
 dev_dependencies:

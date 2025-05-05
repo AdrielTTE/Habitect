@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:habitect/profile.dart';
 import 'package:habitect/streakTracking.dart';
 import 'goal_creation_page.dart';
 import 'home.dart';
@@ -52,7 +53,7 @@ class _HomePageState extends State<HomePage> {
       case 2:
         return StreakTracking(title: '',);
       case 3:
-        return Center(child: Text('Profile Screen')); // Profile screen placeholder
+        return ProfilePage(); // Profile screen placeholder
       default:
         return Home_Screen(); // Default to home page
     }

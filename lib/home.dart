@@ -25,7 +25,7 @@ class _Home_ScreenState extends State<Home_Screen> {
         centerTitle: true,
         actions: const [
           CircleAvatar(
-            backgroundImage: AssetImage('assets/avatar.jpg'),
+            backgroundImage: AssetImage('assets/images/mask.png'),
           ),
           SizedBox(width: 16),
         ],

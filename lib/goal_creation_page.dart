@@ -3,6 +3,10 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'HomePage.dart';
+
 
 class GoalCreationPage extends StatefulWidget {
   @override
@@ -28,9 +32,8 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
   TextEditingController _timeController = TextEditingController();
   TextEditingController _endDateController = TextEditingController();
   TextEditingController _endTimeController = TextEditingController();
-  String _selectedFrequency = "Daily";
+  String _selectedFrequency = "Weekly";
   bool _reminderEnabled = false;
-  bool _isOneTime = false;
   int _reminderInDays = 1;
   int _reminderInHours = 1;
   int _reminderInMinutes = 1;
@@ -44,10 +47,7 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
 
   void _showValidationError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
@@ -56,19 +56,26 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            contentPadding: EdgeInsets.all(20),
-            title: Text("CONGRATULATIONS!",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.star_border, size: 80, color: Colors.orange),
-                SizedBox(height: 20),
-                Text("You successfully created a task!",
-                    style: TextStyle(fontSize: 18), textAlign: TextAlign.center),
-              ],
-            ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          contentPadding: EdgeInsets.all(20),
+          title: Text(
+            "CONGRATULATIONS!",
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star_border, size: 80, color: Colors.orange),
+              SizedBox(height: 20),
+              Text(
+                "You successfully created a task!",
+                style: TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -80,20 +87,24 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                 _endTimeController.clear();
                 setState(() {
                   _reminderEnabled = false;
-                  _selectedFrequency = "Daily";
+                  _selectedFrequency = "Weekly";
                   _currentCategoryIndex = 0;
                   _customInterval = 1;
                   _intervalUnit = "Days";
-                  _isOneTime = true;
                 });
               },
               child: Text(
                 "Create another one",
                 style: TextStyle(color: Colors.orange, fontSize: 16),
               ),
-            ), // Added comma here
+            ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => HomePage()),
+                );
+              },
               child: Text(
                 "Complete",
                 style: TextStyle(color: Colors.orange, fontSize: 16),
@@ -119,8 +130,8 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                   children: <Widget>[
                     DropdownButton<String>(
                       value: _reminderType,
-                      items: <String>['minute', 'hour', 'day']
-                          .map((String value) {
+                      items:
+                      <String>['minute', 'hour', 'day'].map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text("Set reminder in $value(s)"),
@@ -147,8 +158,12 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                     ),
                     SizedBox(height: 20),
                     if (_reminderType == 'minute')
-                      _buildSlider("minute", 1, 60, _reminderInMinutes, (value) {
-                        setDialogState(() => _reminderInMinutes = value.toInt());
+                      _buildSlider("minute", 1, 60, _reminderInMinutes, (
+                          value,
+                          ) {
+                        setDialogState(
+                              () => _reminderInMinutes = value.toInt(),
+                        );
                       }),
                     if (_reminderType == 'hour')
                       _buildSlider("hour", 1, 24, _reminderInHours, (value) {
@@ -163,11 +178,13 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
               ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text("Cancel")),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text("Cancel"),
+                ),
                 TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text("Save")),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text("Save"),
+                ),
               ],
             );
           },
@@ -190,8 +207,13 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
     }
   }
 
-  Widget _buildSlider(String label, double min, double max, int currentValue,
-      Function(double) onChanged) {
+  Widget _buildSlider(
+      String label,
+      double min,
+      double max,
+      int currentValue,
+      Function(double) onChanged,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -221,8 +243,10 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
             });
           },
         ),
-        Text("Selected: $currentValue $label(s)",
-            style: TextStyle(fontSize: 18)),
+        Text(
+          "Selected: $currentValue $label(s)",
+          style: TextStyle(fontSize: 18),
+        ),
       ],
     );
   }
@@ -230,451 +254,508 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Goal Creation")),
-      body: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Category Carousel
-                Text("Choose a Category", style: TextStyle(fontSize: 18)),
-                CarouselSlider.builder(
-                  itemCount: categories.length,
-                  itemBuilder: (context, index, realIndex) => GestureDetector(
-                    onTap: () => setState(() => _currentCategoryIndex = index),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(categories[index]["icon"], size: 50),
-                        SizedBox(height: 10),
-                        Text(categories[index]["name"],
-                            style: TextStyle(fontSize: 18)),
-                      ],
-                    ),
-                  ),
-                  options: CarouselOptions(
-                    height: 125,
-                    enlargeCenterPage: true,
-                    viewportFraction: 0.25,
-                    initialPage: 0,
-                    enableInfiniteScroll: false,
-                    autoPlay: false,
-                    onPageChanged: (index, _) =>
-                        setState(() => _currentCategoryIndex = index),
-                  ),
-                ),
-
-                // Task Input
-                SizedBox(height: 20),
-                Text("What do you want to do?", style: TextStyle(fontSize: 18)),
-                TextFormField(
-                  controller: _taskController,
-                  decoration: InputDecoration(
-                    hintText: "Enter your task",
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                  value?.isEmpty ?? true ? 'Please enter a task name' : null,
-                ),
-
-                // Start Date & Time
-                SizedBox(height: 20),
-                Text("Start Date & Time", style: TextStyle(fontSize: 18)),
-                Row(
+        appBar: AppBar(title: Text("Goal Creation")),
+        body: Padding(
+            padding: const EdgeInsets.all(15.0),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _dateController,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          hintText: "Select date",
-                          suffixIcon: IconButton(
-                            icon: Icon(Icons.calendar_today),
-                            onPressed: () async {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime.now(),
-                                firstDate: DateTime(2000),
-                                lastDate: DateTime(2101),
-                              );
-                              if (date != null) {
-                                setState(() => _dateController.text =
-                                "${date.month}/${date.day}/${date.year}");
-                              }
-                            },
-                          ),
-                        ),
-                        validator: (value) =>
-                        value?.isEmpty ?? true ? 'Please select date' : null,
-                      ),
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _timeController,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          hintText: "Select time",
-                          suffixIcon: IconButton(
-                            icon: Icon(Icons.access_time),
-                            onPressed: () async {
-                              final time = await showTimePicker(
-                                context: context,
-                                initialTime: TimeOfDay.now(),
-                              );
-                              if (time != null) {
-                                setState(() {
-                                  _timeController.text = time.format(context);
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) return 'Please select time';
-                          try {
-                            DateFormat("h:mm a").parse(value!);
-                            return null;
-                          } catch (e) {
-                            return 'Invalid time format (Use HH:MM AM/PM)';
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-
-                // One-time Event Switch
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("One-time Event?", style: TextStyle(fontSize: 18)),
-                    Switch(
-                      value: _isOneTime,
-                      onChanged: (value) {
-                        setState(() {
-                          _isOneTime = value;
-                          if (_isOneTime) {
-                            _selectedFrequency = "Daily";
-                            _customInterval = 1;
-                            _intervalUnit = "Days";
-                          }
-                        });
-                      },
-                    ),
-                  ],
-                ),
-
-                // Recurring Task Fields
-                if (!_isOneTime) ...[
-                  SizedBox(height: 20),
-                  Text("Frequency", style: TextStyle(fontSize: 18)),
-                  DropdownButton<String>(
-                    value: _selectedFrequency,
-                    items: frequencies.map((f) =>
-                        DropdownMenuItem(value: f, child: Text(f))).toList(),
-                    onChanged: (value) =>
-                        setState(() => _selectedFrequency = value!),
-                  ),
-
-                  if (_selectedFrequency == "Custom")
-                    Padding(
-                      padding: EdgeInsets.only(top: 10),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.withOpacity(0.5)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: EdgeInsets.all(12),
+                    // Category Carousel
+                    Text("Choose a Category", style: TextStyle(fontSize: 18)),
+                    CarouselSlider.builder(
+                      itemCount: categories.length,
+                      itemBuilder:
+                          (context, index, realIndex) => GestureDetector(
+                        onTap:
+                            () => setState(() => _currentCategoryIndex = index),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text("Custom Frequency",
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                            Icon(categories[index]["icon"], size: 50),
                             SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    keyboardType: TextInputType.number,
-                                    initialValue: _customInterval.toString(),
-                                    decoration: InputDecoration(
-                                      labelText: 'Every',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                    ),
-                                    validator: (value) {
-                                      if (_selectedFrequency == "Custom") {
-                                        if (value?.isEmpty ?? true) return 'Enter interval';
-                                        final num = int.tryParse(value!);
-                                        if (num == null || num < 1) return 'Enter valid number';
-                                      }
-                                      return null;
-                                    },
-                                    onChanged: (value) =>
-                                    _customInterval = int.tryParse(value) ?? 1,
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8),
-                                    child: DropdownButton<String>(
-                                      value: _intervalUnit,
-                                      underline: SizedBox(),
-                                      items: intervalUnits.map((unit) => DropdownMenuItem(
-                                        value: unit,
-                                        child: Text(unit, style: TextStyle(fontSize: 14)),
-                                      )).toList(),
-                                      onChanged: (value) =>
-                                          setState(() => _intervalUnit = value!),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              categories[index]["name"],
+                              style: TextStyle(fontSize: 18),
                             ),
                           ],
                         ),
                       ),
+                      options: CarouselOptions(
+                        height: 125,
+                        enlargeCenterPage: true,
+                        viewportFraction: 0.25,
+                        initialPage: 0,
+                        enableInfiniteScroll: false,
+                        autoPlay: false,
+                        onPageChanged:
+                            (index, _) =>
+                            setState(() => _currentCategoryIndex = index),
+                      ),
                     ),
 
-                  // End Date & Time
-                  SizedBox(height: 20),
-                  Text("End Date & Time", style: TextStyle(fontSize: 18)),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _endDateController,
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            hintText: "Select end date",
-                            suffixIcon: IconButton(
-                              icon: Icon(Icons.calendar_today),
-                              onPressed: () async {
-                                final date = await showDatePicker(
-                                  context: context,
-                                  initialDate: DateTime.now(),
-                                  firstDate: DateTime(2000),
-                                  lastDate: DateTime(2101),
-                                );
-                                if (date != null) {
-                                  setState(() => _endDateController.text =
-                                  "${date.month}/${date.day}/${date.year}");
-                                }
-                              },
-                            ),
-                          ),
-                          validator: (value) {
-                            if (!_isOneTime && (value?.isEmpty ?? true)) {
-                              return 'Please select end date';
-                            }
-                            if (value?.isNotEmpty ?? false) {
-                              final datePattern = RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$');
-                              if (!datePattern.hasMatch(value!)) {
-                                return 'Invalid date format (MM/DD/YYYY)';
-                              }
-                            }
-                            return null;
-                          },
-                        ),
+                    // Task Input
+                    SizedBox(height: 20),
+                    Text("What do you want to do?", style: TextStyle(fontSize: 18)),
+                    TextFormField(
+                      controller: _taskController,
+                      decoration: InputDecoration(
+                        hintText: "Enter your task",
+                        border: OutlineInputBorder(),
                       ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _endTimeController,
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            hintText: "Select end time",
-                            suffixIcon: IconButton(
-                              icon: Icon(Icons.access_time),
-                              onPressed: () async {
-                                final time = await showTimePicker(
-                                  context: context,
-                                  initialTime: TimeOfDay.now(),
-                                );
-                                if (time != null) {
-                                  setState(() => _endTimeController.text = time.format(context));
-                                }
-                              },
+                      validator:
+                          (value) =>
+                      value?.isEmpty ?? true
+                          ? 'Please enter a task name'
+                          : null,
+                    ),
+
+                    // Start Date & Time
+                    SizedBox(height: 20),
+                    Text("Start Date & Time", style: TextStyle(fontSize: 18)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _dateController,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              hintText: "Select date",
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.calendar_today),
+                                onPressed: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate: DateTime.now(),
+                                    firstDate: DateTime(2000),
+                                    lastDate: DateTime(2101),
+                                  );
+                                  if (date != null) {
+                                    setState(
+                                          () =>
+                                      _dateController.text =
+                                      "${date.month}/${date.day}/${date.year}",
+                                    );
+                                  }
+                                },
+                              ),
                             ),
+                            validator:
+                                (value) =>
+                            value?.isEmpty ?? true
+                                ? 'Please select date'
+                                : null,
                           ),
-                          validator: (value) {
-                            if (!_isOneTime && (value?.isEmpty ?? true)) {
-                              return 'Please select end time';
-                            }
-                            if (value?.isNotEmpty ?? false) {
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _timeController,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              hintText: "Select time",
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.access_time),
+                                onPressed: () async {
+                                  final time = await showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                  );
+                                  if (time != null) {
+                                    setState(() {
+                                      _timeController.text = time.format(context);
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value?.isEmpty ?? true)
+                                return 'Please select time';
                               try {
                                 DateFormat("h:mm a").parse(value!);
                                 return null;
                               } catch (e) {
-                                return 'Invalid time format (HH:MM AM/PM)';
+                                return 'Invalid time format (Use HH:MM AM/PM)';
                               }
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-
-                // Reminder Section
-                SizedBox(height: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Set a reminder", style: TextStyle(fontSize: 18)),
-                        Switch(
-                          value: _reminderEnabled,
-                          onChanged: (value) {
-                            setState(() => _reminderEnabled = value);
-                            if (value) _showReminderTimePicker(context);
-                          },
+                            },
+                          ),
                         ),
                       ],
                     ),
-                    Visibility(
-                      visible: _reminderEnabled,
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 8.0),
-                        child: Text(
-                          _getReminderText(),
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w500,
+
+                    // End Date & Time
+                    SizedBox(height: 20),
+                    Text("End Date & Time", style: TextStyle(fontSize: 18)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _endDateController,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              hintText: "Select end date",
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.calendar_today),
+                                onPressed: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate: DateTime.now(),
+                                    firstDate: DateTime(2000),
+                                    lastDate: DateTime(2101),
+                                  );
+                                  if (date != null) {
+                                    setState(
+                                          () =>
+                                      _endDateController.text =
+                                      "${date.month}/${date.day}/${date.year}",
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value?.isEmpty ?? true) {
+                                return 'Please select end date';
+                              }
+                              if (value?.isNotEmpty ?? false) {
+                                final datePattern = RegExp(
+                                  r'^\d{1,2}/\d{1,2}/\d{4}$',
+                                );
+                                if (!datePattern.hasMatch(value!)) {
+                                  return 'Invalid date format (MM/DD/YYYY)';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _endTimeController,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              hintText: "Select end time",
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.access_time),
+                                onPressed: () async {
+                                  final time = await showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                  );
+                                  if (time != null) {
+                                    setState(
+                                          () =>
+                                      _endTimeController.text = time.format(
+                                        context,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value?.isEmpty ?? true) {
+                                return 'Please select end time';
+                              }
+                              if (value?.isNotEmpty ?? false) {
+                                try {
+                                  DateFormat("h:mm a").parse(value!);
+                                  return null;
+                                } catch (e) {
+                                  return 'Invalid time format (HH:MM AM/PM)';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 20),
+                    Text("Frequency", style: TextStyle(fontSize: 18)),
+                    DropdownButton<String>(
+                      value: _selectedFrequency,
+                      items:
+                      frequencies
+                          .map(
+                            (f) => DropdownMenuItem(value: f, child: Text(f)),
+                      )
+                          .toList(),
+                      onChanged:
+                          (value) => setState(() => _selectedFrequency = value!),
+                    ),
+
+                    if (_selectedFrequency == "Custom")
+                      Padding(
+                        padding: EdgeInsets.only(top: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.withOpacity(0.5)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Custom Frequency",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      keyboardType: TextInputType.number,
+                                      initialValue: _customInterval.toString(),
+                                      decoration: InputDecoration(
+                                        labelText: 'Every',
+                                        border: OutlineInputBorder(),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                        ),
+                                      ),
+                                      validator: (value) {
+                                        if (_selectedFrequency == "Custom") {
+                                          if (value?.isEmpty ?? true)
+                                            return 'Enter interval';
+                                          final num = int.tryParse(value!);
+                                          if (num == null || num < 1)
+                                            return 'Enter valid number';
+                                        }
+                                        return null;
+                                      },
+                                      onChanged:
+                                          (value) =>
+                                      _customInterval =
+                                          int.tryParse(value) ?? 1,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Colors.grey.withOpacity(0.3),
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                      child: DropdownButton<String>(
+                                        value: _intervalUnit,
+                                        underline: SizedBox(),
+                                        items:
+                                        intervalUnits
+                                            .map(
+                                              (unit) => DropdownMenuItem(
+                                            value: unit,
+                                            child: Text(
+                                              unit,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                            .toList(),
+                                        onChanged:
+                                            (value) => setState(
+                                              () => _intervalUnit = value!,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ),
+
+                    // Reminder Section
+                    SizedBox(height: 20),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Set a reminder", style: TextStyle(fontSize: 18)),
+                            Switch(
+                              value: _reminderEnabled,
+                              onChanged: (value) {
+                                setState(() => _reminderEnabled = value);
+                                if (value) _showReminderTimePicker(context);
+                              },
+                            ),
+                          ],
+                        ),
+                        Visibility(
+                          visible: _reminderEnabled,
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              _getReminderText(),
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
 
-                // Action Buttons
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        _formKey.currentState?.reset();
-                        _taskController.clear();
-                        _dateController.clear();
-                        _timeController.clear();
-                        _endDateController.clear();
-                        _endTimeController.clear();
-                        setState(() {
-                          _reminderEnabled = false;
-                          _selectedFrequency = "Daily";
-                          _currentCategoryIndex = 0;
-                          _customInterval = 1;
-                          _intervalUnit = "Days";
-                          _isOneTime = true;
-                        });
-                      },
-                      child: Text("Cancel"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey,
-                        minimumSize: Size(170, 50),
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          try {
-                            final startDatePattern = RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$');
-                            if (!startDatePattern.hasMatch(_dateController.text)) {
-                              throw FormatException('Invalid start date format (MM/DD/YYYY)');
-                            }
-                            final startDateParts = _dateController.text.split('/');
-                            final month = int.parse(startDateParts[0]);
-                            final day = int.parse(startDateParts[1]);
-                            final year = int.parse(startDateParts[2]);
+                    // Action Buttons
+                    SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            _formKey.currentState?.reset();
+                            _taskController.clear();
+                            _dateController.clear();
+                            _timeController.clear();
+                            _endDateController.clear();
+                            _endTimeController.clear();
+                            setState(() {
+                              _reminderEnabled = false;
+                              _selectedFrequency = "Weekly";
+                              _currentCategoryIndex = 0;
+                              _customInterval = 1;
+                              _intervalUnit = "Days";
+                            });
+                          },
+                          child: Text("Cancel"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey,
+                            minimumSize: Size(170, 50),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            if (_formKey.currentState!.validate()) {
+                              try {
+                                // Parse start date and time
+                                final startDate = DateFormat(
+                                  "MM/dd/yyyy",
+                                ).parse(_dateController.text);
+                                final startTime = DateFormat(
+                                  "h:mm a",
+                                ).parse(_timeController.text);
+                                final startDateTime = DateTime(
+                                  startDate.year,
+                                  startDate.month,
+                                  startDate.day,
+                                  startTime.hour,
+                                  startTime.minute,
+                                );
 
-                            // Parse start time
-                            final startTime = DateFormat("h:mm a").parse(_timeController.text);
+                                // Parse end date and time
+                                final endDate = DateFormat(
+                                  "MM/dd/yyyy",
+                                ).parse(_endDateController.text);
+                                final endTime = DateFormat(
+                                  "h:mm a",
+                                ).parse(_endTimeController.text);
+                                final endDateTime = DateTime(
+                                  endDate.year,
+                                  endDate.month,
+                                  endDate.day,
+                                  endTime.hour,
+                                  endTime.minute,
+                                );
 
-                            // Combine into DateTime
-                            final startDateTime = DateTime(
-                              year,
-                              month,
-                              day,
-                              startTime.hour,
-                              startTime.minute,
-                            );
+                                // Validate that end date-time is after start date-time
+                                if (!endDateTime.isAfter(startDateTime)) {
+                                  _showValidationError(
+                                    'End date and time must be after start date and time',
+                                  );
+                                  return;
+                                }
 
-                            // Create Firestore document
-                            final taskData = {
-                              'category': categories[_currentCategoryIndex]["name"],
-                              'title': _taskController.text,
-                              'date': _dateController.text,
-                              'time': DateFormat.jm().format(startDateTime),
-                              'isOneTime': _isOneTime,
-                              'reminder': _reminderEnabled ? {
-                                'type': _reminderType,
-                                'value': _reminderType == 'minute'
-                                    ? _reminderInMinutes
-                                    : _reminderType == 'hour'
-                                    ? _reminderInHours
-                                    : _reminderInDays,
-                              } : null,
-                            };
+                                // Get current user's UID
+                                String? userId =
+                                    FirebaseAuth.instance.currentUser?.uid;
+                                if (userId == null) {
+                                  _showValidationError(
+                                    'No user is currently logged in.',
+                                  );
+                                  return;
+                                }
 
-                            // Add recurring task fields if not one-time
-                            if (!_isOneTime) {
-                              // Add end date/time
-                              taskData['endDate'] = _endDateController.text;
-                              taskData['endTime'] = _endTimeController.text;
-
-                              // Add frequency information
-                              if (_selectedFrequency == "Custom") {
-                                taskData['frequency'] = {
-                                  'type': 'Custom',
-                                  'interval': _customInterval,
-                                  'unit': _intervalUnit,
+                                // Create Firestore document
+                                final taskData = {
+                                  'category':
+                                  categories[_currentCategoryIndex]["name"],
+                                  'title': _taskController.text,
+                                  'startDate': _dateController.text,
+                                  'startTime': DateFormat.jm().format(
+                                    startDateTime,
+                                  ),
+                                  'endDate': _endDateController.text,
+                                  'endTime': DateFormat.jm().format(endDateTime),
+                                  'frequency':
+                                  _selectedFrequency == "Custom"
+                                      ? {
+                                    'type': 'Custom',
+                                    'interval': _customInterval,
+                                    'unit': _intervalUnit,
+                                  }
+                                      : {'type': _selectedFrequency},
+                                  'reminder':
+                                  _reminderEnabled
+                                      ? {
+                                    'type': _reminderType,
+                                    'value':
+                                    _reminderType == 'minute'
+                                        ? _reminderInMinutes
+                                        : _reminderType == 'hour'
+                                        ? _reminderInHours
+                                        : _reminderInDays,
+                                  }
+                                      : null,
+                                  'createdAt': FieldValue.serverTimestamp(),
                                 };
-                              } else {
-                                taskData['frequency'] = {
-                                  'type': _selectedFrequency,
-                                };
+
+                                // Add task to the user's tasks sub-collection
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(userId)
+                                    .collection('tasks')
+                                    .add(taskData);
+
+                                _showCongratulationsDialog(context);
+                              } catch (e) {
+                                _showValidationError(
+                                  e.toString().replaceAll('FormatException: ', ''),
+                                );
                               }
                             }
-
-                            await FirebaseFirestore.instance
-                                .collection('To Do')
-                                .add(taskData);
-
-                            _showCongratulationsDialog(context);
-                          } catch (e) {
-                            _showValidationError(e.toString().replaceAll('FormatException: ', ''));
-                          }
-                        }
-                      },
-                      child: Text("Save"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        minimumSize: Size(170, 50),
-                      ),
+                          },
+                          child: Text("Save"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            minimumSize: Size(170, 50),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
         ),
-      ),
     );
   }
 }
