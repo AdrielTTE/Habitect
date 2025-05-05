@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "95706388458",
+    "project_id": "habitect-74f40",
+    "storage_bucket": "habitect-74f40.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:95706388458:android:a98761a22a1e83d00e0493",
+        "android_client_info": {
+          "package_name": "com.example.habitect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjk9eNydA7Y-hNidy58nAHwZBH0QP_qeQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
