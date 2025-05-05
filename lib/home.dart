@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:habitect/stream_note.dart';
 
+import 'TaskScreen.dart';
 import 'add_note_screen.dart';
 import 'constants.dart';
 
@@ -23,11 +24,22 @@ class _Home_ScreenState extends State<Home_Screen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        actions: const [
+        actions: [
+          // Avatar in the app bar
           CircleAvatar(
             backgroundImage: AssetImage('assets/images/mask.png'),
           ),
           SizedBox(width: 16),
+          // Add the IconButton to navigate to TaskScreen
+          IconButton(
+            icon: Icon(Icons.task),  // Icon for TaskScreen
+            onPressed: () {
+              // Navigate to TaskScreen when clicked
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => TaskScreen(),
+              ));
+            },
+          ),
         ],
       ),
 
