@@ -253,7 +253,10 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text("Goal Creation")),
+      appBar: AppBar(
+        title: const Text("Goal Creation"),
+        centerTitle: true, // ✅ This centers the title
+      ),
         body: Padding(
             padding: const EdgeInsets.all(15.0),
             child: Form(
@@ -302,7 +305,12 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                       controller: _taskController,
                       decoration: InputDecoration(
                         hintText: "Enter your task",
-                        border: OutlineInputBorder(),
+                        border: OutlineInputBorder(
+                          borderSide:
+                          BorderSide(width: 4),
+                          borderRadius: BorderRadius.circular(40.0),
+                        ),
+
                       ),
                       validator:
                           (value) =>

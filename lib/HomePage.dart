@@ -30,8 +30,8 @@ class _HomePageState extends State<HomePage> {
         animationDuration: const Duration(milliseconds: 280),
         items: const <Widget>[
           Icon(Icons.home, size: 26, color: Colors.white),
-          Icon(Icons.message, size: 26, color: Colors.white),
-          Icon(Icons.notifications, size: 26, color: Colors.white),
+          Icon(Icons.book_sharp, size: 26, color: Colors.white),
+          Icon(Icons.analytics, size: 26, color: Colors.white),
           Icon(Icons.person, size: 26, color: Colors.white),
         ],
         onTap: (index) {

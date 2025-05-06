@@ -26,9 +26,6 @@ class _Home_ScreenState extends State<Home_Screen> {
         centerTitle: true,
         actions: [
           // Avatar in the app bar
-          CircleAvatar(
-            backgroundImage: AssetImage('assets/images/mask.png'),
-          ),
           SizedBox(width: 16),
           // Add the IconButton to navigate to TaskScreen
           IconButton(

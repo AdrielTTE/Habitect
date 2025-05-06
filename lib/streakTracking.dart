@@ -44,6 +44,7 @@ class _StreakTrackingState extends State<StreakTracking> {
   int dailyCount = 0;
   int monthlyCount = 0;
   int weeklyCount = 0;
+  int customCount = 0;
 
   // To store task completion by hour (heatmap data)
   Map<int, int> taskHours = {};
@@ -123,6 +124,7 @@ class _StreakTrackingState extends State<StreakTracking> {
           dailyCount = 0;
           monthlyCount = 0;
           weeklyCount = 0;
+          customCount = 0;
           goalCount = querySnapshot.docs.length; // Count the total number of goals
 
           // Calculate the goal progress based on frequency
@@ -141,7 +143,9 @@ class _StreakTrackingState extends State<StreakTracking> {
                 monthlyCount++;
               } else if (frequencyType == 'Weekly') {
                 weeklyCount++;
-              }
+              } else{
+                customCount++;
+            }
             }
           });
         });
@@ -360,9 +364,10 @@ class _StreakTrackingState extends State<StreakTracking> {
             "Daily": dailyCount.toDouble(),
             "Monthly": monthlyCount.toDouble(),
             "Weekly": weeklyCount.toDouble(),
+            "Custom": customCount.toDouble(),
           },
           chartType: ChartType.ring,
-          colorList: [Colors.orange, Colors.blue, Colors.green],
+          colorList: [Colors.orange, Colors.blue, Colors.green, Colors.purple],
           chartRadius: 200,
           centerText: "Goal Progress",
           centerTextStyle: TextStyle(
