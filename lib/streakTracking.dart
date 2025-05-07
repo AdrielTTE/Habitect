@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:habitect/constants.dart';
 import 'package:pie_chart/pie_chart.dart'; // Import pie_chart package
 
 class StreakTracking extends StatefulWidget {
@@ -23,8 +24,18 @@ class _StreakTrackingState extends State<StreakTracking> {
 
   // Month options
   List<String> months = [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-    'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   // Get the current date and month
@@ -39,12 +50,22 @@ class _StreakTrackingState extends State<StreakTracking> {
   int doneCount = 0;
   int notDoneCount = 0;
   int goalCount = 0;
+  int ongoingCount = 0;
 
   // For storing goal progress
   int dailyCount = 0;
   int monthlyCount = 0;
   int weeklyCount = 0;
   int customCount = 0;
+
+  //For Categories
+  int dailyCat = 0;
+  int familyCat = 0;
+  int groceriesCat = 0;
+  int exerciseCat = 0;
+  int worksCat = 0;
+  int schoolsCat = 0;
+  int othersCat = 0;
 
   // To store task completion by hour (heatmap data)
   Map<int, int> taskHours = {};
@@ -55,7 +76,8 @@ class _StreakTrackingState extends State<StreakTracking> {
 
     // Automatically set the selected year and month based on the system date
     selectedYear = currentYear.toString();
-    selectedMonth = months[currentMonth - 1]; // Month is 1-based, list is 0-based
+    selectedMonth =
+        months[currentMonth - 1]; // Month is 1-based, list is 0-based
 
     switch (selectedMonth) {
       case 'January':
@@ -95,7 +117,7 @@ class _StreakTrackingState extends State<StreakTracking> {
         monthNumber = '12';
         break;
       default:
-      // Return -1 if the month is invalid
+        // Return -1 if the month is invalid
         monthNumber = '-1';
         break;
     }
@@ -112,12 +134,22 @@ class _StreakTrackingState extends State<StreakTracking> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Fetch goals from Firestore without any date constraints
+        // Convert selected month and year to "MM/YYYY" format
+        String startDateString = "${monthNumber}/1/$selectedYear"; // First day of the month
+        //String endDateString = "${monthNumber}/31/$selectedYear"; // Last day of the month
+
+
+        // Fetch goals from Firestore and filter by selected month and year using string comparison
         QuerySnapshot querySnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('tasks')
-            .get();  // Fetching all tasks for now
+            .where('startDate', isGreaterThanOrEqualTo: startDateString)
+            //.where('startDate', isLessThanOrEqualTo: endDateString)
+            .get(); // Fetching tasks for the selected month and year
+
+        print ('Start Date: $startDateString');
+       // print ('End Date: $endDateString');
 
         setState(() {
           // Reset counts for categories
@@ -125,6 +157,14 @@ class _StreakTrackingState extends State<StreakTracking> {
           monthlyCount = 0;
           weeklyCount = 0;
           customCount = 0;
+          dailyCat = 0;
+          familyCat = 0;
+          groceriesCat = 0;
+          exerciseCat = 0;
+          worksCat = 0;
+          schoolsCat = 0;
+          othersCat = 0;
+
           goalCount = querySnapshot.docs.length; // Count the total number of goals
 
           // Calculate the goal progress based on frequency
@@ -143,9 +183,36 @@ class _StreakTrackingState extends State<StreakTracking> {
                 monthlyCount++;
               } else if (frequencyType == 'Weekly') {
                 weeklyCount++;
-              } else{
+              } else {
                 customCount++;
+              }
             }
+            print(doc['startDate']);
+
+            var category = doc['category'];
+
+            switch (category) {
+              case 'Daily':
+                dailyCat++;
+                break;
+              case 'Family':
+                familyCat++;
+                break;
+              case 'Groceries':
+                groceriesCat++;
+                break;
+              case 'Exercise':
+                exerciseCat++;
+                break;
+              case 'Works':
+                worksCat++;
+                break;
+              case 'Schools':
+                schoolsCat++;
+                break;
+              case 'Others':
+                othersCat++;
+                break;
             }
           });
         });
@@ -155,31 +222,36 @@ class _StreakTrackingState extends State<StreakTracking> {
     }
   }
 
+
   // Fetch "To Do" tasks from Firestore
   void _fetchToDoTasks() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         // Fetch tasks from Firestore
-        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('notes')
-            .get();
+        QuerySnapshot querySnapshot =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('notes')
+                .get();
 
         setState(() {
-          _todoTasks = querySnapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
+          _todoTasks =
+              querySnapshot.docs
+                  .map((doc) => doc.data() as Map<String, dynamic>)
+                  .toList();
 
           // Recalculate the counts every time we fetch the tasks
           doneCount = _todoTasks.where((task) => task['isDon'] == true).length;
-          notDoneCount = _todoTasks.where((task) => task['isDon'] == false).length;
+          notDoneCount =
+              _todoTasks.where((task) => task['isDon'] == false).length;
 
           // Initialize the taskHours map to track tasks per hour
           taskHours.clear();
           _todoTasks.forEach((task) {
-            String timeString = task['time'] ?? ''; // Assuming it's in the format "HH:mm"
+            String timeString =
+                task['time'] ?? ''; // Assuming it's in the format "HH:mm"
             if (timeString.isNotEmpty) {
               // Validate and extract the hour part from time (e.g., "13:30" -> 13)
               int hour = int.tryParse(timeString.split(':')[0]) ?? 0;
@@ -198,7 +270,8 @@ class _StreakTrackingState extends State<StreakTracking> {
 
   @override
   Widget build(BuildContext context) {
-    Color dropdownColor = Colors.orange.shade300; // Set consistent color for all dropdowns
+    Color dropdownColor =
+        Colors.orange.shade300; // Set consistent color for all dropdowns
 
     return Scaffold(
       appBar: AppBar(
@@ -207,11 +280,14 @@ class _StreakTrackingState extends State<StreakTracking> {
         backgroundColor: Colors.white,
         elevation: 0, // Removing shadow for a cleaner look
       ),
-      body: SingleChildScrollView( // Wrap the content in SingleChildScrollView
+      body: SingleChildScrollView(
+        // Wrap the content in SingleChildScrollView
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const SizedBox(height: 16), // Spacing between the title and dropdowns
+            const SizedBox(
+              height: 16,
+            ), // Spacing between the title and dropdowns
             _buildCategoryYearMonthDropdowns(dropdownColor),
             _buildCategoryContent(),
           ],
@@ -243,9 +319,8 @@ class _StreakTrackingState extends State<StreakTracking> {
             }
           },
           dropdownColor: dropdownColor,
-
         ),
-        /*
+
         _buildDropdown<String>(
           value: selectedYear,
           items: years,
@@ -278,7 +353,7 @@ class _StreakTrackingState extends State<StreakTracking> {
             }
           },
           dropdownColor: dropdownColor,
-        ),*/
+        ),
       ],
     );
   }
@@ -299,15 +374,22 @@ class _StreakTrackingState extends State<StreakTracking> {
       ),
       child: DropdownButton<T>(
         value: value,
-        items: items
-            .map((item) => DropdownMenuItem<T>(
-          value: item as T,
-          child: Text(item, style: const TextStyle(color: Colors.white)),
-        ))
-            .toList(),
+        items:
+            items
+                .map(
+                  (item) => DropdownMenuItem<T>(
+                    value: item as T,
+                    child: Text(
+                      item,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                )
+                .toList(),
         onChanged: onChanged,
         icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-        dropdownColor: dropdownColor, // Make sure dropdown background color matches
+        dropdownColor:
+            dropdownColor, // Make sure dropdown background color matches
         style: const TextStyle(color: Colors.white),
       ),
     );
@@ -316,7 +398,6 @@ class _StreakTrackingState extends State<StreakTracking> {
   // Content based on the selected category (Goals or To Do)
   Widget _buildCategoryContent() {
     if (selectedCategory == 'To Do') {
-      //To remove
 
     }
     return _buildGoalsContent();
@@ -326,108 +407,294 @@ class _StreakTrackingState extends State<StreakTracking> {
     if (selectedCategory == 'To Do') {
       // This section is for the "To Do" pie chart
       return Container(
-        height: 350,
+        padding: EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white, // Background color for the container
+          borderRadius: BorderRadius.circular(16), // Rounded corners
         ),
-        child: PieChart(
-          dataMap: {
-            "Completed": doneCount.toDouble(),
-            "Incomplete": notDoneCount.toDouble(),
-          },
-          chartType: ChartType.ring,
-          colorList: [Colors.green, Colors.red], // Completed in green, Incomplete in red
-          chartRadius: 200,
-          centerText: "Task Progress",
-          centerTextStyle: TextStyle(
-            fontSize: 24,
-            color: Colors.black,
-          ),
-          legendOptions: const LegendOptions(showLegends: true,
-              legendTextStyle: TextStyle(
-                fontSize:18,
-              )),
-          chartValuesOptions: const ChartValuesOptions(showChartValues: false),
+        child: Column(
+          children: <Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  height: 191,
+                  width: 191,
+                  decoration: BoxDecoration(
+                    color: Colors.deepOrange,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.5),
+                        spreadRadius: 3,
+                        blurRadius: 7,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '\nIncompleted\n$notDoneCount',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                SizedBox(width: 23),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  height: 191,
+                  width: 191,
+                  decoration: BoxDecoration(
+                    color: Colors.lightGreen,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.5),
+                        spreadRadius: 3,
+                        blurRadius: 7,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '\nCompleted\n$doneCount',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+
+            Container(
+
+              height: 350,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 0.5),
+                    spreadRadius: 3,
+                    blurRadius: 7,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: PieChart(
+                dataMap: {
+                  "Completed": doneCount.toDouble(),
+                  "Incomplete": notDoneCount.toDouble(),
+                },
+                chartType: ChartType.ring,
+                colorList: [
+                  Colors.green,
+                  Colors.red,
+                ], // Completed in green, Incomplete in red
+                chartRadius: 200,
+                centerText: "Task Progress",
+                centerTextStyle: TextStyle(fontSize: 24, color: Colors.black),
+                legendOptions: const LegendOptions(
+                  showLegends: true,
+                  legendTextStyle: TextStyle(fontSize: 18),
+                ),
+                chartValuesOptions: const ChartValuesOptions(
+                  showChartValues: false,
+                ),
+              ),
+            ),
+          ],
         ),
       );
     } else {
       // This section is for the "Goals" pie chart
       return Container(
-        height: 350,
+        padding: EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white, // Background color for the container
+          borderRadius: BorderRadius.circular(16), // Rounded corners
         ),
-        child: PieChart(
-          dataMap: {
-            "Daily": dailyCount.toDouble(),
-            "Monthly": monthlyCount.toDouble(),
-            "Weekly": weeklyCount.toDouble(),
-            "Custom": customCount.toDouble(),
-          },
-          chartType: ChartType.ring,
-          colorList: [Colors.orange, Colors.blue, Colors.green, Colors.purple],
-          chartRadius: 200,
-          centerText: "Goal Progress",
-          centerTextStyle: TextStyle(
-              fontSize: 24,
-              color: Colors.black,
-          ),
-          legendOptions: const LegendOptions(
-              showLegends: true,
-            legendTextStyle: TextStyle(
-              fontSize:18,
-            )
-          ),
-
-          chartValuesOptions: const ChartValuesOptions(showChartValues: false),
+        child: Column(
+          children: <Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  height: 191,
+                  width: 191,
+                  decoration: BoxDecoration(
+                    color: Colors.deepOrange,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.5),
+                        spreadRadius: 3,
+                        blurRadius: 7,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '\nTotal Goals\n$goalCount',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                SizedBox(width: 23),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  height: 191,
+                  width: 191,
+                  decoration: BoxDecoration(
+                    color: Colors.lightGreen,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.5),
+                        spreadRadius: 3,
+                        blurRadius: 7,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '\nActive Goals\n$ongoingCount',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            Container(
+              height: 350,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 0.5),
+                    spreadRadius: 3,
+                    blurRadius: 7,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: PieChart(
+                dataMap: {
+                  "Daily": dailyCount.toDouble(),
+                  "Monthly": monthlyCount.toDouble(),
+                  "Weekly": weeklyCount.toDouble(),
+                  "Custom": customCount.toDouble(),
+                },
+                chartType: ChartType.ring,
+                colorList: [
+                  Colors.orange,
+                  Colors.blue,
+                  Colors.green,
+                  Colors.purple,
+                ],
+                chartRadius: 200,
+                centerText: "Frequency",
+                centerTextStyle: TextStyle(fontSize: 24, color: Colors.black),
+                legendOptions: const LegendOptions(
+                  showLegends: true,
+                  legendTextStyle: TextStyle(fontSize: 18),
+                ),
+                chartValuesOptions: const ChartValuesOptions(
+                  showChartValues: false,
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            Container(
+              height: 350,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 0.5),
+                    spreadRadius: 3,
+                    blurRadius: 7,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: PieChart(
+                dataMap: {
+                  "Daily": dailyCat.toDouble(),
+                  "Family": familyCat.toDouble(),
+                  "Groceries": groceriesCat.toDouble(),
+                  "Exercise": exerciseCat.toDouble(),
+                  "Works": worksCat.toDouble(),
+                  "Schools": schoolsCat.toDouble(),
+                  "Others": othersCat.toDouble(),
+                },
+                chartType: ChartType.ring,
+                colorList: [
+                  Colors.blueGrey,
+                  Colors.cyanAccent,
+                  Colors.pinkAccent,
+                  Colors.teal,
+                  Colors.cyan,
+                  Colors.yellow,
+                  Colors.green,
+                ],
+                chartRadius: 200,
+                centerText: "Category",
+                centerTextStyle: TextStyle(fontSize: 24, color: Colors.black),
+                legendOptions: const LegendOptions(
+                  showLegends: true,
+                  legendTextStyle: TextStyle(fontSize: 18),
+                ),
+                chartValuesOptions: const ChartValuesOptions(
+                  showChartValues: false,
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
   }
-
 
   // Goals content
   Widget _buildGoalsContent() {
-    if(selectedCategory=='Goals'){
+    if (selectedCategory == 'Goals') {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height:20),
-          const Text('Goals Summary', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          SizedBox(height: 70),
+          const Text(
+            'Goals Summary',
+            style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           _buildGraphSection(),
           const SizedBox(height: 20),
-          Text('Number of Goals Completed: 0',
-            style: TextStyle(fontSize: 20),),
-          SizedBox(height: 20),
-          Text('Number of Current Goals: $goalCount',
-            style: TextStyle(fontSize: 20),),
-          const SizedBox(height: 20),
-          const Text('Goal Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          const SizedBox(height: 20),
-          const SizedBox(height: 20),
-          const SizedBox(height: 10),
+
+
         ],
       );
-    } else{
+    } else {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height:20),
-          const Text('To Dos Summary', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          SizedBox(height: 20),
+          const Text(
+            'To Dos Summary',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           _buildGraphSection(),
           const SizedBox(height: 20),
-          Text('Number of Incompleted To Dos: $notDoneCount',
-            style: TextStyle(fontSize: 20),),
-          SizedBox(height: 20),
-          Text('Number of Completed To Dos: $doneCount',
-            style: TextStyle(fontSize: 20),),
           const SizedBox(height: 20),
-          const Text('To Do Progress', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text(
+            'To Do Progress',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 10),
           const SizedBox(height: 20),
           const SizedBox(height: 20),
@@ -435,9 +702,7 @@ class _StreakTrackingState extends State<StreakTracking> {
         ],
       );
     }
-
   }
-
 
   // Build the To Do list
   Widget _buildToDoList() {
@@ -482,13 +747,19 @@ class _StreakTrackingState extends State<StreakTracking> {
           return Container(
             margin: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: taskCount > 0 ? Colors.green.withOpacity(taskCount / 5) : Colors.grey,
+              color:
+                  taskCount > 0
+                      ? Colors.green.withOpacity(taskCount / 5)
+                      : Colors.grey,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
               child: Text(
                 '$taskCount',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           );
