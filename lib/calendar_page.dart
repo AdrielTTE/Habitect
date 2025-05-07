@@ -1,24 +1,135 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class CalendarScreen extends StatefulWidget {
+  const CalendarScreen({Key? key}) : super(key: key);
+
   @override
   _CalendarScreenState createState() => _CalendarScreenState();
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
-  String _currentView = 'Month';
+  final CalendarController _calendarController = CalendarController();
+  CalendarView _currentView = CalendarView.month;
 
-  List<String> weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  List<String> timeSlots = [
-    "6am", "7am", "8am", "9am", "10am", "11am", "12pm",
-    "1pm", "2pm", "3pm", "4pm", "5pm", "6pm", "7pm",
-    "8pm", "9pm", "10pm", "11pm", "12am", "1am", "2am",
-    "3am", "4am", "5am"
-  ];
+  // Data source for calendar events
+  _EventDataSource? _events;
+  bool _isLoading = true;
+
+  // Format the date for the app bar title
+  String _formatAppBarDate(DateTime date, CalendarView view) {
+    if (view == CalendarView.month) {
+      return '${_getMonthName(date.month)} ${date.year}';
+    } else if (view == CalendarView.week) {
+      // Get the start and end of the visible week
+      final firstDay = date.subtract(Duration(days: date.weekday % 7));
+      final lastDay = firstDay.add(const Duration(days: 6));
+
+      if (firstDay.month == lastDay.month) {
+        return '${_getMonthName(firstDay.month)} ${firstDay.year}';
+      } else if (firstDay.year == lastDay.year) {
+        return '${_getMonthName(firstDay.month)} - ${_getMonthName(lastDay.month)} ${firstDay.year}';
+      } else {
+        return '${_getMonthName(firstDay.month)} ${firstDay.year} - ${_getMonthName(lastDay.month)} ${lastDay.year}';
+      }
+    } else {
+      // Day view
+      return '${date.day} ${_getMonthName(date.month)} ${date.year}';
+    }
+  }
+
+  // Helper to get month name
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
+  }
+
+  // Fetch events from Firestore
+  Future<void> _fetchEvents() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .get();
+
+      final List<Event> appointments = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        // Date and time formatters
+        final dateFormatter = DateFormat('M/d/yyyy');
+        final timeFormatter = DateFormat('h:mm a');
+
+        // Parse start date and time
+        final startDateStr = data['startDate'] as String? ?? '1/1/1970';
+        final startTimeStr = data['startTime'] as String? ?? '12:00 AM';
+        final startDate = dateFormatter.parse(startDateStr);
+        final startTime = timeFormatter.parse(startTimeStr);
+        final from = DateTime(
+          startDate.year,
+          startDate.month,
+          startDate.day,
+          startTime.hour,
+          startTime.minute,
+        );
+
+        // Parse end date and time
+        final endDateStr = data['endDate'] as String? ?? '1/1/1970';
+        final endTimeStr = data['endTime'] as String? ?? '12:00 AM';
+        final endDate = dateFormatter.parse(endDateStr);
+        final endTime = timeFormatter.parse(endTimeStr);
+        final to = DateTime(
+          endDate.year,
+          endDate.month,
+          endDate.day,
+          endTime.hour,
+          endTime.minute,
+        );
+
+        return Event(
+          id: doc.id,
+          title: data['title'] ?? 'No Title',
+          category: data['category'] as String?,
+          createdAt: data['createdAt'] as Timestamp?,
+          startDate: data['startDate'] as String?,
+          startTime: data['startTime'] as String?,
+          endDate: data['endDate'] as String?,
+          endTime: data['endTime'] as String?,
+          frequency: data['frequency'] as Map<String, dynamic>?,
+          reminder: data['reminder'],
+          from: from,
+          to: to,
+          background: Colors.blue, // Default color
+          isAllDay: from.day != to.day || (data['frequency']?['type'] == 'Daily'),
+        );
+      }).toList();
+
+      setState(() {
+        _events = _EventDataSource(appointments);
+        _isLoading = false;
+      });
+    } catch (e, stackTrace) {
+      print('Error fetching events: $e\nStackTrace: $stackTrace');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _calendarController.view = _currentView;
+    _fetchEvents();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,274 +137,190 @@ class _CalendarScreenState extends State<CalendarScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Row(
-          children: [
-            Icon(Icons.menu, color: Colors.black),
-            SizedBox(width: 8),
-            Text(
-              'Calendar',
-              style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Spacer(),
-            PopupMenuButton<String>(
-              icon: Icon(Icons.calendar_today, color: Colors.black),
-              onSelected: (value) {
-                setState(() {
-                  _currentView = value;
-                });
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(value: 'Month', child: Text('Month View')),
-                PopupMenuItem(value: 'Week', child: Text('Week View')),
-                PopupMenuItem(value: 'Day', child: Text('Day View')),
-              ],
-            ),
-            SizedBox(width: 16),
-            Icon(Icons.search, color: Colors.black),
-          ],
+        iconTheme: const IconThemeData(color: Colors.black),
+        centerTitle: true, // Center the title
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () {
+            DateTime currentDate = _calendarController.displayDate!;
+            if (_currentView == CalendarView.month) {
+              _calendarController.displayDate = DateTime(currentDate.year, currentDate.month - 1, 1);
+            } else if (_currentView == CalendarView.week) {
+              _calendarController.displayDate = currentDate.subtract(const Duration(days: 7));
+            } else {
+              _calendarController.displayDate = currentDate.subtract(const Duration(days: 1));
+            }
+          },
         ),
-      ),
-      body: buildCalendarBody(),
-    );
-  }
-
-  Widget buildCalendarBody() {
-    switch (_currentView) {
-      case 'Month':
-        return buildMonthView();
-      case 'Week':
-        return buildWeekView();
-      case 'Day':
-        return buildDayView();
-      default:
-        return Center(child: Text("Invalid view"));
-    }
-  }
-
-  Widget buildMonthView() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TableCalendar(
-        headerStyle: HeaderStyle(formatButtonVisible: false, titleCentered: true),
-        firstDay: DateTime.utc(2020, 1, 1),
-        lastDay: DateTime.utc(2030, 12, 31),
-        focusedDay: _focusedDay,
-        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        onDaySelected: (selectedDay, focusedDay) {
-          setState(() {
-            _selectedDay = selectedDay;
-            _focusedDay = focusedDay;
-          });
-        },
-        calendarFormat: _calendarFormat,
-        onFormatChanged: (format) {
-          setState(() {
-            _calendarFormat = format;
-          });
-        },
-        startingDayOfWeek: StartingDayOfWeek.sunday,
-        calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
-          selectedDecoration: BoxDecoration(color: Colors.deepOrange, shape: BoxShape.circle),
+        title: StreamBuilder<DateTime>(
+          stream: Stream.periodic(const Duration(seconds: 1), (_) => _calendarController.displayDate ?? DateTime.now()),
+          builder: (context, snapshot) {
+            final date = _calendarController.displayDate ?? DateTime.now();
+            return Text(
+              _formatAppBarDate(date, _currentView),
+              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            );
+          },
         ),
-      ),
-    );
-  }
-
-  Widget buildWeekView() {
-    DateTime startOfWeek = _selectedDay ?? _focusedDay;
-    int dayOfWeek = startOfWeek.weekday;
-    DateTime firstDayOfWeek = startOfWeek.subtract(Duration(days: dayOfWeek - 1));
-
-    List<DateTime> daysOfWeek = List.generate(7, (index) {
-      return firstDayOfWeek.add(Duration(days: index));
-    });
-
-
-    List<String> monthsNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-
-    String headerMonth = monthsNames[firstDayOfWeek.month - 1];
-    int headerYear = firstDayOfWeek.year;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        children: [
-          const SizedBox(height: 16),
-          Text(
-            '$headerMonth $headerYear',
-            style: TextStyle(fontSize: 18,fontWeight: FontWeight.bold),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.arrow_forward_ios, color: Colors.black),
+            onPressed: () {
+              DateTime currentDate = _calendarController.displayDate!;
+              if (_currentView == CalendarView.month) {
+                _calendarController.displayDate = DateTime(currentDate.year, currentDate.month + 1, 1);
+              } else if (_currentView == CalendarView.week) {
+                _calendarController.displayDate = currentDate.add(const Duration(days: 7));
+              } else {
+                _calendarController.displayDate = currentDate.add(const Duration(days: 1));
+              }
+            },
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(width: 50, child: Text("")),
-              Expanded(
-                child: Row(
-                  children: daysOfWeek.map((day) {
-                    String weekday = weekDays[day.weekday % 7]; //Start from sunday
-                    return Expanded(
-                      child: Center(
-                        child: Column(
-                          children: [
-                            Text('${day.day}', style: TextStyle(fontWeight: FontWeight.bold)),
-                            SizedBox(height: 4),
-                            Text(weekday,style: TextStyle(fontSize: 12)),
-                            Container(
-                              height: 4,
-                              width: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.orange,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+          PopupMenuButton<CalendarView>(
+            icon: const Icon(Icons.calendar_view_day, color: Colors.black),
+            onSelected: (CalendarView value) {
+              setState(() {
+                _calendarController.view = value;
+                _currentView = value;
+              });
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: CalendarView.month,
+                child: Text('Month View'),
+              ),
+              const PopupMenuItem(
+                value: CalendarView.week,
+                child: Text('Week View'),
+              ),
+              const PopupMenuItem(
+                value: CalendarView.day,
+                child: Text('Day View'),
               ),
             ],
           ),
-          SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              itemCount: timeSlots.length,
-              itemBuilder: (context, timeIndex) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 50,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(timeSlots[timeIndex], style: TextStyle(fontSize: 12)),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 60,
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: Colors.grey.shade200),
-                          ),
-                        ),
-                        child: Row(
-                          children: List.generate(7, (dayIndex) {
-                            return Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    right: BorderSide(color: Colors.grey.shade200),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
         ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SfCalendar(
+        controller: _calendarController,
+        viewHeaderHeight: 40,
+        headerHeight: 0, // Hide the default header since we have our custom navigation
+        todayHighlightColor: Colors.orange,
+        showNavigationArrow: false, // Hide the default navigation arrows
+        allowViewNavigation: true,
+        dataSource: _events,
+        timeSlotViewSettings: const TimeSlotViewSettings(
+          startHour: 0,
+          endHour: 24,
+          timeInterval: Duration(hours: 1),
+          timeFormat: 'h a',
+          timeTextStyle: TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+            color: Colors.black54,
+          ),
+        ),
+        monthViewSettings: const MonthViewSettings(
+          dayFormat: 'EEE',
+          numberOfWeeksInView: 6,
+          appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
+        ),
+        firstDayOfWeek: 7, // Sunday
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Navigate to add event screen
+          // You can implement this later
+        },
+        child: const Icon(Icons.add),
+        backgroundColor: Colors.orange,
       ),
     );
   }
 
-  Widget buildDayView() {
-    DateTime displayDay = _focusedDay;
-    String weekday = weekDays[displayDay.weekday % 7]; // Adjust for Sunday start
-    //String month =  _focusedDay.month == 2 ? 'Februry' : '';  // You can expand this with a full month lists
+  @override
+  void dispose() {
+    _calendarController.dispose();
+    super.dispose();
+  }
+}
 
-    List<String> monthsNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    String month = monthsNames[_focusedDay.month - 1];
+// Event model class
+class Event {
+  final String id;
+  final String title;
+  final String? category;
+  final Timestamp? createdAt;
+  final String? startDate;
+  final String? startTime;
+  final String? endDate;
+  final String? endTime;
+  final Map<String, dynamic>? frequency;
+  final dynamic reminder;
+  final DateTime from; // Parsed startDate + startTime
+  final DateTime to; // Parsed endDate + endTime
+  final Color background; // Default for calendar
+  final bool isAllDay; // Default or derived
 
+  Event({
+    required this.id,
+    required this.title,
+    this.category,
+    this.createdAt,
+    this.startDate,
+    this.startTime,
+    this.endDate,
+    this.endTime,
+    this.frequency,
+    this.reminder,
+    required this.from,
+    required this.to,
+    required this.background,
+    required this.isAllDay,
+  });
+}
 
-    //months[displayDay.month - 1]; // Get month name
-
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-
-        // Month & Navigation
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              icon: Icon(Icons.arrow_left),
-              onPressed: () {
-                setState(() {
-                  _focusedDay = _focusedDay.subtract(Duration(days: 1));
-                  _selectedDay = _focusedDay;
-                });
-              },
-            ),
-            Column(
-              children: [
-                Text('$month ${_focusedDay.year}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                SizedBox(height: 4),
-                Text(
-                  weekday,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '${displayDay.day}',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            IconButton(
-              icon: Icon(Icons.arrow_right),
-              onPressed: () {
-                setState(() {
-                  _focusedDay = _focusedDay.add(Duration(days: 1));
-                  _selectedDay = _focusedDay;
-                });
-              },
-            ),
-          ],
-        ),
-
-        const Divider(),
-
-        // Scrollable Time Grid
-        Expanded(
-          child: ListView.builder(
-            itemCount: timeSlots.length,
-            itemBuilder: (context, index) {
-              return Container(
-                height: 60,
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade300, width: 1.0),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      timeSlots[index],
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
+// Calendar data source
+class _EventDataSource extends CalendarDataSource {
+  _EventDataSource(List<Event> source) {
+    appointments = source;
   }
 
+  @override
+  DateTime getStartTime(int index) {
+    return (appointments![index] as Event).from;
+  }
+
+  @override
+  DateTime getEndTime(int index) {
+    return (appointments![index] as Event).to;
+  }
+
+  @override
+  String getSubject(int index) {
+    final event = appointments![index] as Event;
+    return event.category != null ? '${event.title} (${event.category})' : event.title;
+  }
+
+  @override
+  Color getColor(int index) {
+    return (appointments![index] as Event).background;
+  }
+
+  @override
+  bool isAllDay(int index) {
+    return (appointments![index] as Event).isAllDay;
+  }
+
+  @override
+  String? getRecurrenceRule(int index) {
+    final event = appointments![index] as Event;
+    final freqType = event.frequency?['type'] as String?;
+    if (freqType == 'Daily') {
+      return 'FREQ=DAILY;INTERVAL=1;COUNT=365'; // Repeat daily for 1 year
+    }
+    return null;
+  }
 }
