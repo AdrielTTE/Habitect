@@ -66,14 +66,14 @@ class CalendarEvent {
 
     final category = data['category'] as String? ?? 'General';
     final background = {
-      'Consulting': Colors.red[700]!,
-      'Project Plan': Colors.green[700]!,
-      'Development': Colors.grey[700]!,
-      'Support': Colors.purple[700]!,
-      'Scrum': Colors.blue[700]!,
-      'General': Colors.orange[700]!,
-      'Groceries': Colors.green[700]!,
-    }[category] ?? Colors.orange[700]!;
+      'Daily': Colors.red[700]!,
+      'Family': Colors.green[700]!,
+      'Groceries': Colors.grey[700]!,
+      'Exercise': Colors.purple[700]!,
+      'Works': Colors.blue[700]!,
+      'Schools': Colors.orange[700]!,
+      'Others': Colors.green[700]!,
+    }[category] ?? Colors.red[700]!;
 
     return CalendarEvent(
       id: doc.id,
