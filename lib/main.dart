@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'calendar_page.dart';
 import 'package:firebase_core/firebase_core.dart';
-//import 'app.dart';
+import 'app.dart';
 //import 'firebase_options.dart';
 
 void main() async {
@@ -9,6 +9,7 @@ void main() async {
   await Firebase.initializeApp(); // Initialize Firebase
   runApp( MyApp());
 }
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
