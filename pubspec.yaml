@@ -36,12 +36,12 @@ dependencies:
   syncfusion_flutter_core: ^29.1.41
   cloud_firestore: ^5.6.7
   firebase_core: ^3.13.0
-  #firebase_auth: ^5.5.3
+  firebase_auth: ^5.5.3
   #flutter_svg: ^1.0.3
   #fl_chart: ^0.40.0
   #percent_indicator: ^4.0.0
   table_calendar: ^3.2.0
-  intl: ^0.18.1
+  intl: ^0.20.2
 
 
   # The following adds the Cupertino Icons font to your application.

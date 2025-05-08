@@ -12,10 +12,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Habitect Calendar',
-      theme: ThemeData(primarySwatch: Colors.deepOrange),
-      home: CalendarScreen(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
+        title: 'Habitect Calendar',
+        theme: ThemeData(primarySwatch: Colors.deepOrange),
+        home: CalendarScreen(),
+        debugShowCheckedModeBanner: false,
+        );
+    }
 }
