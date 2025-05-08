@@ -66,14 +66,14 @@ class CalendarEvent {       //represent an event in the calendar
 
     final category = data['category'] as String? ?? 'General';
     final background = {
-      'Daily': Colors.red[700]!,         //colors area based on the event's category
-      'Family': Colors.green[700]!,
-      'Groceries': Colors.grey[700]!,
-      'Exercise': Colors.purple[700]!,
-      'Works': Colors.blue[700]!,
-      'Schools': Colors.orange[700]!,
-      'Others': Colors.green[700]!,
-    }[category] ?? Colors.red[700]!;
+      'Daily': Colors.red[300]!,         //colors area based on the event's category
+      'Family': Colors.green[300]!,
+      'Groceries': Colors.grey[350]!,
+      'Exercise': Colors.purple[200]!,
+      'Works': Colors.blue[200]!,
+      'Schools': Colors.orange[200]!,
+      'Others': Colors.green[100]!,
+    }[category] ?? Colors.red[50]!;
 
     return CalendarEvent(
       id: doc.id,
@@ -155,7 +155,7 @@ class CalendarService {
 }
 
 class CalendarScreen extends StatefulWidget {         //Calendar Screen manages calendar views (examples, month, week, day)
-  const CalendarScreen({Key? key}) : super(key: key);
+  const CalendarScreen({super.key});
 
   @override
   _CalendarScreenState createState() => _CalendarScreenState();
@@ -173,7 +173,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
 
-  List<String> _categories = [
+  final List<String> _categories = [
     'Daily',
     'Family',
     'Groceries',
@@ -347,8 +347,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         onPressed: () {
           // Navigate to add event screen
         },
-        child: const Icon(Icons.add),
         backgroundColor: Colors.orange,
+        child: const Icon(Icons.add),
       ),
     );
   }
