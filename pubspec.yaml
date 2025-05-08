@@ -43,6 +43,7 @@ dependencies:
   percent_indicator: ^4.0.0
   image_picker: ^0.8.5+3
   firebase_storage: ^12.4.5
+  shared_preferences: ^2.5.3
 
 
 
@@ -62,6 +63,16 @@ dev_dependencies:
   curved_navigation_bar: ^1.0.3
   msh_checkbox: ^1.1.1
   uuid: ^3.0.6
+  flutter_native_splash: ^2.4.6
+
+flutter_native_splash:
+  background_image: "assets/images/splash_image.png"
+  android: true
+  ios: true
+  android_gravity: center
+  ios_content_mode: center
+  fullscreen: true
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
