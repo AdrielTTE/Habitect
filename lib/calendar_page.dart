@@ -4,6 +4,156 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 
+class CalendarEvent {
+  final String id;
+  final String title;
+  final String category;
+  final Timestamp? createdAt;
+  final String startDate;
+  final String startTime;
+  final String endDate;
+  final String endTime;
+  final Frequency frequency;
+  final Reminder reminder;
+  final DateTime from;
+  final DateTime to;
+  final Color background;
+  final bool isAllDay;
+
+  CalendarEvent({
+    required this.id,
+    required this.title,
+    required this.category,
+    this.createdAt,
+    required this.startDate,
+    required this.startTime,
+    required this.endDate,
+    required this.endTime,
+    required this.frequency,
+    required this.reminder,
+    required this.from,
+    required this.to,
+    required this.background,
+    required this.isAllDay,
+  });
+
+  factory CalendarEvent.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final dateFormatter = DateFormat('M/d/yyyy');
+    final timeFormatter = DateFormat('h:mm a');
+    final startDateStr = data['startDate'] as String? ?? '1/1/1970';
+    final startTimeStr = data['startTime'] as String? ?? '12:00 AM';
+    final startDate = dateFormatter.parse(startDateStr);
+    final startTime = timeFormatter.parse(startTimeStr);
+    final from = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+      startTime.hour,
+      startTime.minute,
+    );
+    final endDateStr = data['endDate'] as String? ?? startDateStr;
+    final endTimeStr = data['endTime'] as String? ?? startTimeStr;
+    final endDate = dateFormatter.parse(endDateStr);
+    final endTime = timeFormatter.parse(endTimeStr);
+    final to = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      endTime.hour,
+      endTime.minute,
+    );
+
+    final category = data['category'] as String? ?? 'General';
+    final background = {
+      'Consulting': Colors.red[700]!,
+      'Project Plan': Colors.green[700]!,
+      'Development': Colors.grey[700]!,
+      'Support': Colors.purple[700]!,
+      'Scrum': Colors.blue[700]!,
+      'General': Colors.orange[700]!,
+      'Groceries': Colors.green[700]!,
+    }[category] ?? Colors.orange[700]!;
+
+    return CalendarEvent(
+      id: doc.id,
+      title: data['title'] ?? category,
+      category: category,
+      createdAt: data['createdAt'] as Timestamp?,
+      startDate: startDateStr,
+      startTime: startTimeStr,
+      endDate: endDateStr,
+      endTime: endTimeStr,
+      frequency: Frequency.fromMap(data['frequency'] ?? {}),
+      reminder: Reminder.fromMap(data['reminder'] ?? {}),
+      from: from,
+      to: to,
+      background: background,
+      isAllDay: (data['frequency']?['type'] == 'Daily'),
+    );
+  }
+}
+
+class Frequency {
+  final String type;
+
+  Frequency({required this.type});
+
+  factory Frequency.fromMap(Map<String, dynamic> map) {
+    return Frequency(type: map['type'] ?? '');
+  }
+}
+
+class Reminder {
+  final String type;
+  final int value;
+
+  Reminder({required this.type, required this.value});
+
+  factory Reminder.fromMap(Map<String, dynamic> map) {
+    return Reminder(
+      type: map['type'] ?? '',
+      value: map['value'] ?? 0,
+    );
+  }
+}
+
+class CalendarService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final String _collection = 'events';
+
+  Stream<List<CalendarEvent>> getCalendarEvents() {
+    return _firestore
+        .collection(_collection)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => CalendarEvent.fromFirestore(doc))
+        .toList());
+  }
+
+  Stream<List<CalendarEvent>> getEventsByCategory(String category) {
+    return _firestore
+        .collection(_collection)
+        .where('category', isEqualTo: category)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => CalendarEvent.fromFirestore(doc))
+        .toList());
+  }
+
+  Stream<List<CalendarEvent>> getEventsByDateRange(DateTime start, DateTime end) {
+    return _firestore
+        .collection(_collection)
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => CalendarEvent.fromFirestore(doc))
+        .toList());
+  }
+}
+
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
 
@@ -13,38 +163,32 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   final CalendarController _calendarController = CalendarController();
+  final CalendarService _calendarService = CalendarService();
   CalendarView _currentView = CalendarView.month;
   _EventDataSource? _events;
   bool _isLoading = true;
   String? _errorMessage;
   StreamSubscription? _eventSubscription;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   List<String> _categories = [
-    'Consulting',
-    'Project Plan',
-    'Development',
-    'Support',
-    'Scrum',
-    'General',
-    'Groceries'
+    'Daily',
+    'Family',
+    'Groceries',
+    'Exercise',
+    'Works',
+    'Schools',
+    'Others'
   ];
-  String _selectedCategory = 'General';
-
-  final Map<String, Color> _categoryColors = {
-    'Consulting': Colors.red[700]!,
-    'Project Plan': Colors.green[700]!,
-    'Development': Colors.grey[700]!,
-    'Support': Colors.purple[700]!,
-    'Scrum': Colors.blue[700]!,
-    'General': Colors.orange[700]!,
-    'Groceries': Colors.green[700]!,
-  };
+  String _selectedCategory = 'Daily';
 
   @override
   void initState() {
     super.initState();
     _calendarController.view = _currentView;
     _calendarController.displayDate = DateTime(2025, 5, 5);
+    FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
     _fetchEvents();
   }
 
@@ -55,6 +199,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
+  Future<void> _selectDateRange(BuildContext context) async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      initialDateRange: _startDate != null && _endDate != null
+          ? DateTimeRange(start: _startDate!, end: _endDate!)
+          : null,
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
+      _fetchEvents();
+    }
+  }
+
   Future<void> _fetchEvents() async {
     setState(() {
       _isLoading = true;
@@ -62,69 +224,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
 
     _eventSubscription?.cancel();
-    _eventSubscription = FirebaseFirestore.instance.collection('events').snapshots().listen(
-          (snapshot) {
-        final List<Event> appointments = snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final dateFormatter = DateFormat('M/d/yyyy');
-          final timeFormatter = DateFormat('h:mm a');
-          final startDateStr = data['startDate'] as String? ?? '1/1/1970';
-          final startTimeStr = data['startTime'] as String? ?? '12:00 AM';
-          final startDate = dateFormatter.parse(startDateStr);
-          final startTime = timeFormatter.parse(startTimeStr);
-          final from = DateTime(
-            startDate.year,
-            startDate.month,
-            startDate.day,
-            startTime.hour,
-            startTime.minute,
-          );
-          final endDateStr = data['endDate'] as String? ?? startDateStr;
-          final endTimeStr = data['endTime'] as String? ?? startTimeStr;
-          final endDate = dateFormatter.parse(endDateStr);
-          final endTime = timeFormatter.parse(endTimeStr);
-          final to = DateTime(
-            endDate.year,
-            endDate.month,
-            endDate.day,
-            endTime.hour,
-            endTime.minute,
-          );
-
-          final category = (data['category'] as String?) ?? 'General';
-          final backgroundColor = _categoryColors[category] ?? _categoryColors['General']!;
-
-          return Event(
-            id: doc.id,
-            title: data['title'] ?? category,
-            category: category,
-            createdAt: data['createdAt'] as Timestamp?,
-            startDate: data['startDate'] as String?,
-            startTime: data['startTime'] as String?,
-            endDate: data['endDate'] as String?,
-            endTime: data['endTime'] as String?,
-            frequency: data['frequency'] as Map<String, dynamic>?,
-            reminder: data['reminder'],
-            from: from,
-            to: to,
-            background: backgroundColor,
-            isAllDay: (data['frequency'] != null && (data['frequency'] as Map<String, dynamic>)['type'] == 'Daily'),
-          );
-        }).toList();
-
-        final filteredAppointments = appointments.where((event) => event.category == _selectedCategory).toList();
-
+    final stream = _startDate != null && _endDate != null
+        ? _calendarService.getEventsByDateRange(_startDate!, _endDate!)
+        : _calendarService.getEventsByCategory(_selectedCategory);
+    _eventSubscription = stream.listen(
+          (events) {
         setState(() {
-          _events = _EventDataSource(filteredAppointments);
+          _events = _EventDataSource(events);
           _isLoading = false;
           _errorMessage = null;
         });
       },
       onError: (e, stackTrace) {
-        print('Error fetching events: $e\nStackTrace: $stackTrace');
+        final message = e is FirebaseException
+            ? e.message ?? 'Failed to load events.'
+            : 'An unexpected error occurred.';
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to load events. Please try again.';
+          _errorMessage = message;
         });
       },
     );
@@ -140,11 +257,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
         centerTitle: true,
         title: const Text('Calendar', style: TextStyle(color: Colors.black)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.date_range, color: Colors.black),
+            onPressed: () => _selectDateRange(context),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list, color: Colors.black),
             onSelected: (String value) {
               setState(() {
                 _selectedCategory = value;
+                _startDate = null;
+                _endDate = null;
               });
               _fetchEvents();
             },
@@ -230,7 +353,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildAppointment(BuildContext context, CalendarAppointmentDetails details) {
-    final Event event = details.appointments.first as Event;
+    final CalendarEvent event = details.appointments.first as CalendarEvent;
 
     return Container(
       width: details.bounds.width,
@@ -244,7 +367,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: _currentView == CalendarView.month
             ? Center(
           child: Text(
-            event.category ?? 'General',
+            event.category,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 12,
@@ -259,7 +382,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              event.category ?? 'General',
+              event.category,
               style: const TextStyle(color: Colors.white, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -277,42 +400,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 }
 
-class Event {
-  final String id;
-  final String title;
-  final String? category;
-  final Timestamp? createdAt;
-  final String? startDate;
-  final String? startTime;
-  final String? endDate;
-  final String? endTime;
-  final Map<String, dynamic>? frequency;
-  final dynamic reminder;
-  final DateTime from;
-  final DateTime to;
-  final Color background;
-  final bool isAllDay;
-
-  Event({
-    required this.id,
-    required this.title,
-    this.category,
-    this.createdAt,
-    this.startDate,
-    this.startTime,
-    this.endDate,
-    this.endTime,
-    this.frequency,
-    this.reminder,
-    required this.from,
-    required this.to,
-    required this.background,
-    required this.isAllDay,
-  });
-}
-
 class _EventDataSource extends CalendarDataSource {
-  _EventDataSource(List<Event> source) {
+  _EventDataSource(List<CalendarEvent> source) {
     appointments = source;
   }
 
