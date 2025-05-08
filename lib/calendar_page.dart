@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-import 'dart:async';
+import 'package:flutter/material.dart';  // the core flutter UI components
+import 'package:syncfusion_flutter_calendar/calendar.dart';  // for the calendar widget
+import 'package:cloud_firestore/cloud_firestore.dart';   //firebase integration for data persistence
+import 'package:intl/intl.dart';  // date/time formating
+import 'dart:async';       // for asynchronous operations (streams)
 
-class CalendarEvent {
+class CalendarEvent {       //represent an event in the calendar
   final String id;
   final String title;
-  final String category;
+  final String category;          // convert firestore document into a calendarEvent
   final Timestamp? createdAt;
   final String startDate;
   final String startTime;
@@ -18,7 +18,7 @@ class CalendarEvent {
   final DateTime from;
   final DateTime to;
   final Color background;
-  final bool isAllDay;
+  final bool isAllDay;     // determines isAllDay based on whether the event's frequency is "Daily"
 
   CalendarEvent({
     required this.id,
@@ -29,7 +29,7 @@ class CalendarEvent {
     required this.startTime,
     required this.endDate,
     required this.endTime,
-    required this.frequency,
+    required this.frequency,     // Simple classes to store recurrence and reminder settings ("Daily"  frequency, "40 minutes before" reminder)
     required this.reminder,
     required this.from,
     required this.to,
@@ -66,7 +66,7 @@ class CalendarEvent {
 
     final category = data['category'] as String? ?? 'General';
     final background = {
-      'Daily': Colors.red[700]!,
+      'Daily': Colors.red[700]!,         //colors area based on the event's category
       'Family': Colors.green[700]!,
       'Groceries': Colors.grey[700]!,
       'Exercise': Colors.purple[700]!,
@@ -122,7 +122,7 @@ class CalendarService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String _collection = 'events';
 
-  Stream<List<CalendarEvent>> getCalendarEvents() {
+  Stream<List<CalendarEvent>> getCalendarEvents() {    //fetches all events ordered by createAt
     return _firestore
         .collection(_collection)
         .orderBy('createdAt', descending: true)
@@ -132,7 +132,7 @@ class CalendarService {
         .toList());
   }
 
-  Stream<List<CalendarEvent>> getEventsByCategory(String category) {
+  Stream<List<CalendarEvent>> getEventsByCategory(String category) {   //filter events by category
     return _firestore
         .collection(_collection)
         .where('category', isEqualTo: category)
@@ -142,7 +142,7 @@ class CalendarService {
         .toList());
   }
 
-  Stream<List<CalendarEvent>> getEventsByDateRange(DateTime start, DateTime end) {
+  Stream<List<CalendarEvent>> getEventsByDateRange(DateTime start, DateTime end) {       //query events within a date range
     return _firestore
         .collection(_collection)
         .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
@@ -154,7 +154,7 @@ class CalendarService {
   }
 }
 
-class CalendarScreen extends StatefulWidget {
+class CalendarScreen extends StatefulWidget {         //Calendar Screen manages calendar views (examples, month, week, day)
   const CalendarScreen({Key? key}) : super(key: key);
 
   @override
@@ -165,10 +165,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final CalendarController _calendarController = CalendarController();
   final CalendarService _calendarService = CalendarService();
   CalendarView _currentView = CalendarView.month;
-  _EventDataSource? _events;
+  _EventDataSource? _events;                             // track event, loading states, and errors   // extend calendarDataSource to map CalendarEvent objects to the calendar's requirements
+  // Provides start/end times, titles, colors, and all-day status for each event
   bool _isLoading = true;
   String? _errorMessage;
-  StreamSubscription? _eventSubscription;
+  StreamSubscription? _eventSubscription;          // for real-time updates
   DateTime? _startDate;
   DateTime? _endDate;
 
@@ -305,7 +306,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator(           // reload events
         onRefresh: _fetchEvents,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -339,7 +340,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
             showAgenda: true,
           ),
-          appointmentBuilder: _buildAppointment,
+          appointmentBuilder: _buildAppointment,       //custom appointment UI
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -352,7 +353,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildAppointment(BuildContext context, CalendarAppointmentDetails details) {
+  Widget _buildAppointment(BuildContext context, CalendarAppointmentDetails details) {    //in month view: Show only the category name, week and day view: show category and title
     final CalendarEvent event = details.appointments.first as CalendarEvent;
 
     return Container(
@@ -400,13 +401,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 }
 
-class _EventDataSource extends CalendarDataSource {
+class _EventDataSource extends CalendarDataSource {      //display events
   _EventDataSource(List<CalendarEvent> source) {
     appointments = source;
   }
 
   @override
-  DateTime getStartTime(int index) => appointments![index].from;
+  DateTime getStartTime(int index) => appointments![index].from;     //customie appearance
 
   @override
   DateTime getEndTime(int index) => appointments![index].to;
