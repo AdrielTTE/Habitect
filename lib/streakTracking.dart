@@ -17,7 +17,8 @@ class _StreakTrackingState extends State<StreakTracking> {
   String selectedCategory = 'Goals'; // Default category is 'Goals'
   String selectedYear = '';
   String selectedMonth = '';
-  String monthNumber = '';
+  int monthNumber = 1;
+  int yearNumber=0;
 
   // Year options
   List<String> years = ['2022', '2023', '2024', '2025'];
@@ -76,52 +77,52 @@ class _StreakTrackingState extends State<StreakTracking> {
 
     // Automatically set the selected year and month based on the system date
     selectedYear = currentYear.toString();
-    selectedMonth =
-        months[currentMonth - 1]; // Month is 1-based, list is 0-based
+    selectedMonth = months[currentMonth - 1]; // Month is 1-based, list is 0-based
 
     switch (selectedMonth) {
       case 'January':
-        monthNumber = '1';
+        monthNumber = 1;
         break;
       case 'February':
-        monthNumber = '2';
+        monthNumber = 2;
         break;
       case 'March':
-        monthNumber = '3';
+        monthNumber = 3;
         break;
       case 'April':
-        monthNumber = '4';
+        monthNumber = 4;
         break;
       case 'May':
-        monthNumber = '5';
+        monthNumber = 5;
         break;
       case 'June':
-        monthNumber = '6';
+        monthNumber = 6;
         break;
       case 'July':
-        monthNumber = '7';
+        monthNumber = 7;
         break;
       case 'August':
-        monthNumber = '8';
+        monthNumber = 8;
         break;
       case 'September':
-        monthNumber = '9';
+        monthNumber = 9;
         break;
       case 'October':
-        monthNumber = '10';
+        monthNumber = 10;
         break;
       case 'November':
-        monthNumber = '11';
+        monthNumber = 11;
         break;
       case 'December':
-        monthNumber = '12';
+        monthNumber = 12;
         break;
       default:
         // Return -1 if the month is invalid
-        monthNumber = '-1';
+        monthNumber = -1;
         break;
     }
 
+    yearNumber = int.parse(selectedYear);
     // Fetch the "To Do" tasks when the screen is initialized
     if (selectedCategory == 'To Do') {
       _fetchToDoTasks();
@@ -134,22 +135,41 @@ class _StreakTrackingState extends State<StreakTracking> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Convert selected month and year to "MM/YYYY" format
-        String startDateString = "${monthNumber}/1/$selectedYear"; // First day of the month
-        //String endDateString = "${monthNumber}/31/$selectedYear"; // Last day of the month
+        // Convert selected month and year to "MM/YYYY" format for comparison
+        //String startDateString = "${monthNumber.toString().padLeft(2, '0')}/01/$selectedYear"; // First day of the selected month
+        //String endDateString = "${monthNumber.toString().padLeft(2, '0')}/31/$selectedYear"; // Last day of the selected month
 
-
-        // Fetch goals from Firestore and filter by selected month and year using string comparison
+        // Fetch all tasks from Firestore
         QuerySnapshot querySnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('tasks')
-            .where('startDate', isGreaterThanOrEqualTo: startDateString)
-            //.where('startDate', isLessThanOrEqualTo: endDateString)
-            .get(); // Fetching tasks for the selected month and year
+            .get(); // Fetching all tasks
 
-        print ('Start Date: $startDateString');
-       // print ('End Date: $endDateString');
+        // Initialize a list to store the filtered tasks
+        List<QueryDocumentSnapshot> filteredDocs = [];
+
+        // Loop through the tasks and filter based on the selected month and year
+        querySnapshot.docs.forEach((doc) {
+          String taskDateString = doc['startDate']; // For example, "5/13/2025"
+
+          // Split the string by '/'
+          List<String> dateParts = taskDateString.split('/');
+
+          // Extract the month and year as integers
+          int taskMonth = int.parse(dateParts[0]); // Extract month (e.g., 5 from "5/13/2025")
+          int taskYear = int.parse(dateParts[2]); // Extract year (e.g., 2025 from "5/13/2025")
+
+          // Debug: Print the extracted month and year
+          print('Task Month: $taskMonth, Task Year: $taskYear');
+
+          // Compare the task's month and year with the selected month and year
+          if (taskMonth == monthNumber && taskYear == yearNumber) {
+            // If the task's month and year match the selected month and year, add it to filteredDocs
+            filteredDocs.add(doc);
+         }
+
+        });
 
         setState(() {
           // Reset counts for categories
@@ -165,10 +185,10 @@ class _StreakTrackingState extends State<StreakTracking> {
           schoolsCat = 0;
           othersCat = 0;
 
-          goalCount = querySnapshot.docs.length; // Count the total number of goals
+          goalCount = filteredDocs.length; // Count the total number of goals
 
-          // Calculate the goal progress based on frequency
-          querySnapshot.docs.forEach((doc) {
+          // Calculate the goal progress based on frequency for filtered tasks
+          filteredDocs.forEach((doc) {
             // Check if 'frequency' is a map and get the 'type' field
             var frequency = doc['frequency'];
 
@@ -187,7 +207,6 @@ class _StreakTrackingState extends State<StreakTracking> {
                 customCount++;
               }
             }
-            print(doc['startDate']);
 
             var category = doc['category'];
 
@@ -221,6 +240,7 @@ class _StreakTrackingState extends State<StreakTracking> {
       print("Error fetching Goals: $e");
     }
   }
+
 
 
   // Fetch "To Do" tasks from Firestore
@@ -682,19 +702,15 @@ class _StreakTrackingState extends State<StreakTracking> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 20),
+          SizedBox(height: 70),
           const Text(
             'To Dos Summary',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           _buildGraphSection(),
           const SizedBox(height: 20),
           const SizedBox(height: 20),
-          const Text(
-            'To Do Progress',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
           const SizedBox(height: 10),
           const SizedBox(height: 20),
           const SizedBox(height: 20),
