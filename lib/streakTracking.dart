@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:habitect/constants.dart';
-import 'package:pie_chart/pie_chart.dart'; // Import pie_chart package
+import 'package:pie_chart/pie_chart.dart';
 
 class StreakTracking extends StatefulWidget {
   const StreakTracking({super.key, required this.title});
@@ -36,7 +35,7 @@ class _StreakTrackingState extends State<StreakTracking> {
     'September',
     'October',
     'November',
-    'December',
+    'December'
   ];
 
   // Get the current date and month
@@ -67,6 +66,7 @@ class _StreakTrackingState extends State<StreakTracking> {
   int worksCat = 0;
   int schoolsCat = 0;
   int othersCat = 0;
+  int allTaskCount = 0;
 
   // To store task completion by hour (heatmap data)
   Map<int, int> taskHours = {};
@@ -79,50 +79,7 @@ class _StreakTrackingState extends State<StreakTracking> {
     selectedYear = currentYear.toString();
     selectedMonth = months[currentMonth - 1]; // Month is 1-based, list is 0-based
 
-    switch (selectedMonth) {
-      case 'January':
-        monthNumber = 1;
-        break;
-      case 'February':
-        monthNumber = 2;
-        break;
-      case 'March':
-        monthNumber = 3;
-        break;
-      case 'April':
-        monthNumber = 4;
-        break;
-      case 'May':
-        monthNumber = 5;
-        break;
-      case 'June':
-        monthNumber = 6;
-        break;
-      case 'July':
-        monthNumber = 7;
-        break;
-      case 'August':
-        monthNumber = 8;
-        break;
-      case 'September':
-        monthNumber = 9;
-        break;
-      case 'October':
-        monthNumber = 10;
-        break;
-      case 'November':
-        monthNumber = 11;
-        break;
-      case 'December':
-        monthNumber = 12;
-        break;
-      default:
-        // Return -1 if the month is invalid
-        monthNumber = -1;
-        break;
-    }
 
-    yearNumber = int.parse(selectedYear);
     // Fetch the "To Do" tasks when the screen is initialized
     if (selectedCategory == 'To Do') {
       _fetchToDoTasks();
@@ -135,9 +92,6 @@ class _StreakTrackingState extends State<StreakTracking> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Convert selected month and year to "MM/YYYY" format for comparison
-        //String startDateString = "${monthNumber.toString().padLeft(2, '0')}/01/$selectedYear"; // First day of the selected month
-        //String endDateString = "${monthNumber.toString().padLeft(2, '0')}/31/$selectedYear"; // Last day of the selected month
 
         // Fetch all tasks from Firestore
         QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -146,6 +100,7 @@ class _StreakTrackingState extends State<StreakTracking> {
             .collection('tasks')
             .get(); // Fetching all tasks
 
+        goalCount = querySnapshot.docs.length;
         // Initialize a list to store the filtered tasks
         List<QueryDocumentSnapshot> filteredDocs = [];
 
@@ -184,8 +139,9 @@ class _StreakTrackingState extends State<StreakTracking> {
           worksCat = 0;
           schoolsCat = 0;
           othersCat = 0;
+          allTaskCount = 0;
 
-          goalCount = filteredDocs.length; // Count the total number of goals
+          ongoingCount = filteredDocs.length; // Count the total number of goals
 
           // Calculate the goal progress based on frequency for filtered tasks
           filteredDocs.forEach((doc) {
@@ -241,13 +197,12 @@ class _StreakTrackingState extends State<StreakTracking> {
     }
   }
 
-
-
   // Fetch "To Do" tasks from Firestore
   void _fetchToDoTasks() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+
         // Fetch tasks from Firestore
         QuerySnapshot querySnapshot =
             await FirebaseFirestore.instance
@@ -347,7 +302,8 @@ class _StreakTrackingState extends State<StreakTracking> {
           onChanged: (value) {
             setState(() {
               selectedYear = value!;
-              selectedMonth = 'January';
+              yearNumber = int.parse(selectedYear);
+              print(yearNumber);
             });
             // Fetch tasks based on the selected year
             if (selectedCategory == 'To Do') {
@@ -362,8 +318,52 @@ class _StreakTrackingState extends State<StreakTracking> {
           value: selectedMonth,
           items: _getAvailableMonths(),
           onChanged: (value) {
+
             setState(() {
               selectedMonth = value!;
+              switch (selectedMonth) {
+                case 'January':
+                  monthNumber = 1;
+                  break;
+                case 'February':
+                  monthNumber = 2;
+                  break;
+                case 'March':
+                  monthNumber = 3;
+                  break;
+                case 'April':
+                  monthNumber = 4;
+                  break;
+                case 'May':
+                  monthNumber = 5;
+                  break;
+                case 'June':
+                  monthNumber = 6;
+                  break;
+                case 'July':
+                  monthNumber = 7;
+                  break;
+                case 'August':
+                  monthNumber = 8;
+                  break;
+                case 'September':
+                  monthNumber = 9;
+                  break;
+                case 'October':
+                  monthNumber = 10;
+                  break;
+                case 'November':
+                  monthNumber = 11;
+                  break;
+                case 'December':
+                  monthNumber = 12;
+                  break;
+                default:
+                  monthNumber = -1;
+                  break;
+              }
+              print(selectedMonth);
+              print(monthNumber);
             });
             // Fetch tasks again based on the selected month
             if (selectedCategory == 'To Do') {
@@ -417,9 +417,6 @@ class _StreakTrackingState extends State<StreakTracking> {
 
   // Content based on the selected category (Goals or To Do)
   Widget _buildCategoryContent() {
-    if (selectedCategory == 'To Do') {
-
-    }
     return _buildGoalsContent();
   }
 
