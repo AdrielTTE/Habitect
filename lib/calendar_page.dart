@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'package:intl/intl.dart';
 import 'dart:async';
 
@@ -20,7 +19,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   String? _errorMessage;
   StreamSubscription? _eventSubscription;
 
-  // Map categories to colors based on the sample data
+  List<String> _categories = [
+    'Consulting',
+    'Project Plan',
+    'Development',
+    'Support',
+    'Scrum',
+    'General',
+    'Groceries'
+  ];
+  String _selectedCategory = 'General';
+
   final Map<String, Color> _categoryColors = {
     'Consulting': Colors.red[700]!,
     'Project Plan': Colors.green[700]!,
@@ -28,33 +37,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
     'Support': Colors.purple[700]!,
     'Scrum': Colors.blue[700]!,
     'General': Colors.orange[700]!,
-    'Groceries': Colors.green[700]!, // Matching Firestore sample
+    'Groceries': Colors.green[700]!,
   };
 
-  String _formatAppBarDate(DateTime date, CalendarView view) {
-    if (view == CalendarView.month) {
-      return '${_getMonthName(date.month)} ${date.year}';
-    } else if (view == CalendarView.week) {
-      final firstDay = date.subtract(Duration(days: date.weekday % 7));
-      final lastDay = firstDay.add(const Duration(days: 6));
-      if (firstDay.month == lastDay.month) {
-        return '${_getMonthName(firstDay.month)} ${firstDay.year}';
-      } else if (firstDay.year == lastDay.year) {
-        return '${_getMonthName(firstDay.month)} - ${_getMonthName(lastDay.month)} ${firstDay.year}';
-      } else {
-        return '${_getMonthName(firstDay.month)} ${firstDay.year} - ${_getMonthName(lastDay.month)} ${lastDay.year}';
-      }
-    } else {
-      return '${date.day} ${_getMonthName(date.month)} ${date.year}';
-    }
+  @override
+  void initState() {
+    super.initState();
+    _calendarController.view = _currentView;
+    _calendarController.displayDate = DateTime(2025, 5, 5);
+    _fetchEvents();
   }
 
-  String _getMonthName(int month) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return months[month - 1];
+  @override
+  void dispose() {
+    _eventSubscription?.cancel();
+    _calendarController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchEvents() async {
@@ -114,8 +112,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           );
         }).toList();
 
+        final filteredAppointments = appointments.where((event) => event.category == _selectedCategory).toList();
+
         setState(() {
-          _events = _EventDataSource(appointments);
+          _events = _EventDataSource(filteredAppointments);
           _isLoading = false;
           _errorMessage = null;
         });
@@ -131,71 +131,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _calendarController.view = _currentView;
-    _calendarController.displayDate = DateTime(2025, 5, 5);
-    _fetchEvents();
-  }
-
-  @override
-  void dispose() {
-    _eventSubscription?.cancel();
-    _calendarController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:
-
-      AppBar(
+      appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () {
-            DateTime currentDate = _calendarController.displayDate!;
-            if (_currentView == CalendarView.month) {
-              _calendarController.displayDate = DateTime(currentDate.year, currentDate.month - 1, 1);
-            } else if (_currentView == CalendarView.week) {
-              _calendarController.displayDate = currentDate.subtract(const Duration(days: 7));
-            } else {
-              _calendarController.displayDate = currentDate.subtract(const Duration(days: 1));
-            }
-          },
-        ),
-        title: StreamBuilder<DateTime>(
-          stream: Stream.periodic(const Duration(seconds: 1), (_) => _calendarController.displayDate ?? DateTime.now()),
-          builder: (context, snapshot) {
-            final date = _calendarController.displayDate ?? DateTime.now();
-            return Text(
-              _formatAppBarDate(date, _currentView),
-              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-            );
-          },
-        ),
+        title: const Text('Calendar', style: TextStyle(color: Colors.black)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.today, color: Colors.black),
-            onPressed: () {
-              _calendarController.displayDate = DateTime.now();
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list, color: Colors.black),
+            onSelected: (String value) {
+              setState(() {
+                _selectedCategory = value;
+              });
+              _fetchEvents();
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.arrow_forward_ios, color: Colors.black),
-            onPressed: () {
-              DateTime currentDate = _calendarController.displayDate!;
-              if (_currentView == CalendarView.month) {
-                _calendarController.displayDate = DateTime(currentDate.year, currentDate.month + 1, 1);
-              } else if (_currentView == CalendarView.week) {
-                _calendarController.displayDate = currentDate.add(const Duration(days: 7));
-              } else {
-                _calendarController.displayDate = currentDate.add(const Duration(days: 1));
-              }
+            itemBuilder: (context) {
+              return _categories.map((category) {
+                return PopupMenuItem<String>(
+                  value: category,
+                  child: Text(category),
+                );
+              }).toList();
             },
           ),
           PopupMenuButton<CalendarView>(
@@ -231,12 +190,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ? Center(child: Text(_errorMessage!))
             : SfCalendar(
           controller: _calendarController,
-          viewHeaderHeight: 40,
-          headerHeight: 0,
-          todayHighlightColor: Colors.orange,
-          showNavigationArrow: false,
-          allowViewNavigation: true,
+          view: _currentView,
           dataSource: _events,
+          headerHeight: 50,
+          headerStyle: const CalendarHeaderStyle(
+            textAlign: TextAlign.center,
+            textStyle: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
           timeSlotViewSettings: const TimeSlotViewSettings(
             startHour: 0,
             endHour: 24,
@@ -249,71 +213,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           monthViewSettings: const MonthViewSettings(
-            dayFormat: 'EEE',
-            numberOfWeeksInView: 6,
             appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
             showAgenda: true,
-            agendaStyle: AgendaStyle(
-              backgroundColor: Colors.white,
-              appointmentTextStyle: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-              dateTextStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-              dayTextStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            appointmentDisplayCount: 4,
-            monthCellStyle: MonthCellStyle(
-              textStyle: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-                color: Colors.black87,
-              ),
-              todayTextStyle: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Colors.orange,
-              ),
-              trailingDatesTextStyle: TextStyle(
-                fontWeight: FontWeight.w400,
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-              leadingDatesTextStyle: TextStyle(
-                fontWeight: FontWeight.w400,
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
           ),
-          viewHeaderStyle: const ViewHeaderStyle(
-            dayTextStyle: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.black87,
-            ),
-            dateTextStyle: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-              color: Colors.black87,
-            ),
-          ),
-          firstDayOfWeek: 7,
           appointmentBuilder: _buildAppointment,
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Navigate to add event screen - implement as needed
+          // Navigate to add event screen
         },
         child: const Icon(Icons.add),
         backgroundColor: Colors.orange,
@@ -409,37 +317,17 @@ class _EventDataSource extends CalendarDataSource {
   }
 
   @override
-  DateTime getStartTime(int index) {
-    return appointments![index].from;
-  }
+  DateTime getStartTime(int index) => appointments![index].from;
 
   @override
-  DateTime getEndTime(int index) {
-    return appointments![index].to;
-  }
+  DateTime getEndTime(int index) => appointments![index].to;
 
   @override
-  String getSubject(int index) {
-    return appointments![index].category ?? 'General';
-  }
+  String getSubject(int index) => appointments![index].title;
 
   @override
-  Color getColor(int index) {
-    return appointments![index].background;
-  }
+  Color getColor(int index) => appointments![index].background;
 
   @override
-  bool isAllDay(int index) {
-    return appointments![index].isAllDay;
-  }
-
-  @override
-  String? getRecurrenceRule(int index) {
-    final event = appointments![index] as Event;
-    final freqType = event.frequency?['type'] as String?;
-    if (freqType == 'Daily') {
-      return 'FREQ=DAILY;INTERVAL=1;COUNT=365';
-    }
-    return null;
-  }
+  bool isAllDay(int index) => appointments![index].isAllDay;
 }
