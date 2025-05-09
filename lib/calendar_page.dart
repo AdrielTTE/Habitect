@@ -200,25 +200,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final CalendarController _calendarController = CalendarController();
   final CalendarService _calendarService = CalendarService();
   CalendarView _currentView = CalendarView.month;
+  int _selectedYear = DateTime.now().year;  // Track selected year
   _EventDataSource? _events;
   bool _isLoading = true;
   String? _errorMessage;
   StreamSubscription? _eventSubscription;
   DateTime? _startDate;
   DateTime? _endDate;
-  final List<String> _categories = [
+  final List<String> categories = [
     'All', 'Daily', 'Family', 'Groceries',
     'Exercise', 'Works', 'Schools', 'Others'
   ];
   String _selectedCategory = 'Daily';
 
+
   @override
   void initState() {
     super.initState();
     _calendarController.view = _currentView;
+    _calendarController.displayDate = DateTime(_selectedYear); // Set initial display date
+
+
+
     FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+    //_setYearRange(_selectedYear); // Initialize with current year's range
     _fetchEvents();
   }
+
+  void _setYearRange(int year) {
+    _startDate = DateTime(year, 1, 1);
+    _endDate = DateTime(year, 12, 31);
+  }
+
 
   @override
   void dispose() {
@@ -227,6 +240,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
+  /*
   Future<void> _selectDateRange(BuildContext context) async {
     final picked = await showDateRangePicker(
       context: context,
@@ -244,7 +258,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       });
       _fetchEvents();
     }
-  }
+  } */
 
   Future<void> _fetchEvents() async {
     setState(() => _isLoading = true);
@@ -307,27 +321,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-
         title: const Text('Calendar', style: TextStyle(color: Colors.black)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.date_range),
-            onPressed: () => _selectDateRange(context),
+          // Year dropdown filter
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: DropdownButton<int>(
+              value: _selectedYear,
+              items: List.generate(9, (index) => 2021 + index)
+                  .map((year) => DropdownMenuItem<int>(
+                value: year,
+                child: Text(year.toString()),
+              ))
+                  .toList(),
+              onChanged: (int? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedYear = newValue;
+                    // Update calendar display to show the selected year
+                    _calendarController.displayDate = DateTime(newValue);
+                    // Set date range for event filtering
+                    _startDate = DateTime(newValue, 1, 1);
+                    _endDate = DateTime(newValue, 12, 31);
+                    _fetchEvents();
+                  });
+                }
+              },
+            ),
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) => setState(() {
-              _selectedCategory = value;
-              _startDate = _endDate = null;
-              _fetchEvents();
-            }),
-            itemBuilder: (context) => _categories
-                .map((c) => PopupMenuItem(value: c, child: Text(c)))
-                .toList(),
-          ),
+          // Calendar view selector
           PopupMenuButton<CalendarView>(
             onSelected: (view) => setState(() {
               _currentView = view;
               _calendarController.view = view;
+              // Keep the display date consistent when changing views
+              _calendarController.displayDate = DateTime(_selectedYear);
             }),
             itemBuilder: (context) => [
               const PopupMenuItem(
@@ -344,11 +372,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       ),
       body: _buildCalendarBody(),
-      floatingActionButton: FloatingActionButton(
-          onPressed: () {/* Add navigation */},
-          child: const Icon(Icons.add)),
     );
   }
+
 
   Widget _buildCalendarBody() {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
