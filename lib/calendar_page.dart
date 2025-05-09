@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
 class CalendarEvent {
@@ -41,6 +42,8 @@ class CalendarEvent {
     final data = doc.data() as Map<String, dynamic>;
     final dateFormatter = DateFormat('M/d/yyyy');
     final timeFormatter = DateFormat('h:mm a');
+
+
 
     // Parse start date/time
     final startDate = dateFormatter.parse(data['startDate'] ?? '1/1/1970');
@@ -363,7 +366,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
       headerStyle: const CalendarHeaderStyle(
         textAlign: TextAlign.center, // Ensures the title is centered
       ),
-      monthViewSettings: const MonthViewSettings(showAgenda: true),
+      monthViewSettings: const MonthViewSettings(
+        showAgenda: true,
+        appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+      ),
+      timeSlotViewSettings: const TimeSlotViewSettings(
+        startHour: 0,
+        endHour: 24,
+        timeFormat: 'h:mm a',
+        timeInterval: Duration(hours: 1),
+        minimumAppointmentDuration: Duration(hours: 1),
+        dayFormat: 'EEE',
+        nonWorkingDays: <int>[DateTime.saturday, DateTime.sunday],
+      ),
       appointmentBuilder: _buildAppointment,
     );
   }
@@ -377,15 +392,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       child: Center(
         child: _currentView == CalendarView.month
-            ? Text(event.category,
-            style: const TextStyle(color: Colors.white, fontSize: 12))
+            ? Text(event.title,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 10))
             : Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(event.category,
-                style: const TextStyle(color: Colors.white)),
+                style: const TextStyle(color: Colors.white, fontSize: 12)),
+            const SizedBox(height: 2),
             Text(event.title,
-                style: const TextStyle(color: Colors.white)),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 12)),
           ],
         ),
       ),
