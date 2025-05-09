@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:habitect/HomePage.dart';
 import 'package:habitect/profile.dart';
 import 'package:habitect/streakTracking.dart';
 import 'package:habitect/streakTracking.dart';
@@ -19,6 +20,9 @@ class Home_Screen extends StatefulWidget {
 bool show = true;
 
 class _Home_ScreenState extends State<Home_Screen> {
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

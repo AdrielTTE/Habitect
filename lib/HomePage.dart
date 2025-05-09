@@ -102,6 +102,139 @@ class _HomePageState extends State<HomePage> {
       }
     }
   }
+  Widget getAppBar() {
+    return Scaffold(
+      // AppBar with dynamic title and conditional IconButton
+      appBar: AppBar(
+        title: Text(_titles[_page]), // Dynamically change the title
+        backgroundColor: Colors.orangeAccent,
+        actions: _page == 0
+            ? [
+          // Show IconButton only for Home page
+          IconButton(
+            icon: const Icon(Icons.task),  // Icon for TaskScreen
+            onPressed: () {
+              // Navigate to TaskScreen when clicked
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => TaskScreen(), // TaskScreen should be defined
+              ));
+            },
+          ),
+        ]
+            : [],
+      ),
+
+      // Drawer for navigation
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            // Drawer header with dynamic name and email
+            UserAccountsDrawerHeader(
+              accountName: Text(_accountName ?? 'Loading...'), // Display dynamic name
+              accountEmail: Text(_accountEmail ?? 'Loading...'), // Display dynamic email
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, size: 50, color: Colors.orangeAccent),
+              ),
+              decoration: BoxDecoration(
+                color: Colors.orangeAccent,
+              ),
+            ),
+            // Drawer menu items
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
+              onTap: () {
+                setState(() {
+                  _page = 0; // Navigate to Home
+                });
+                Navigator.pop(context); // Close the drawer
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.book_sharp),
+              title: const Text('Goal Creation'),
+              onTap: () {
+                setState(() {
+                  _page = 1; // Navigate to Goal Creation
+                });
+                Navigator.pop(context); // Close the drawer
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Calendar'),
+              onTap: () {
+                setState(() {
+                  _page = 2; // Navigate to Streak Tracking
+                });
+                Navigator.pop(context); // Close the drawer
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.analytics),
+              title: const Text('Streak Tracking'),
+              onTap: () {
+                setState(() {
+                  _page = 3; // Navigate to Streak Tracking
+                });
+                Navigator.pop(context); // Close the drawer
+              },
+            ),
+
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Profile'),
+              onTap: () {
+                setState(() {
+                  _page = 4; // Navigate to Profile
+                });
+                Navigator.pop(context); // Close the drawer
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () async {
+                await FirebaseAuth.instance.signOut();
+                // Navigate to the login screen after logging out
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => WelcomeScreen()), // LoginScreen should be defined
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+
+      // Body content based on selected page
+      body: _getSelectedPage(),
+
+      // Curved navigation bar at the bottom
+      bottomNavigationBar: CurvedNavigationBar(
+        backgroundColor: Colors.transparent,
+        buttonBackgroundColor: Colors.orangeAccent,
+        color: Colors.orangeAccent,
+        animationDuration: const Duration(milliseconds: 280),
+        items: const <Widget>[
+          Icon(Icons.home, size: 26, color: Colors.white),
+          Icon(Icons.book_sharp, size: 26, color: Colors.white),
+          Icon(Icons.calendar_today, size:26, color: Colors.white),
+          Icon(Icons.analytics, size: 26, color: Colors.white),
+          Icon(Icons.person, size: 26, color: Colors.white),
+        ],
+        index: _page, // Sync the bottom navigation bar with the selected page
+        onTap: (index) {
+          setState(() {
+            _page = index; // Update the page index based on the selected icon
+          });
+        },
+      ),
+    );
+}
 
   @override
   Widget build(BuildContext context) {

@@ -1,8 +1,34 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:pie_chart/pie_chart.dart';
+import 'package:fl_heatmap/fl_heatmap.dart';
 
 
 class GraphWidgets {
+  final rows = [
+    '22',
+    '20',
+    '18',
+    '16',
+    '14',
+    '12',
+    '10',
+    '8',
+    '6',
+    '4',
+    '2',
+    '0',
+
+  ];
+
+  final columns = [
+    '60', '50', '40', '30', '20', '10', '0'
+
+  ];
+
+  final r = Random();
+
   Widget buildGraphSection(String selectedCategory, int notDoneCount, int doneCount, int goalCount, int ongoingCount, int dailyCount, int monthlyCount, int weeklyCount, int customCount, int dailyCat, int familyCat, int worksCat, int schoolsCat, int groceriesCat, int exerciseCat, int othersCat) {
     if (selectedCategory == 'To Do') {
       // This section is for the "To Do" pie chart
@@ -102,7 +128,36 @@ class GraphWidgets {
                   showChartValues: false,
                 ),
               ),
+
             ),
+
+            SizedBox(height:20),
+            Container(
+              padding:EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withValues(alpha: 0.5),
+                      spreadRadius: 3,
+                      blurRadius: 7,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+              child: Heatmap(heatmapData: HeatmapData(rows: rows, columns: columns, items: [
+                for (int row = 0; row < rows.length; row++)
+                  for (int col = 0; col < columns.length; col++)
+                    HeatmapItem(
+                        value: r.nextDouble() * 6,
+                        xAxisLabel: columns[col],
+                        yAxisLabel: rows[row]),
+              ]),
+              )
+
+              ),
+
           ],
         ),
       );

@@ -9,6 +9,7 @@ import 'HomePage.dart';
 class GoalCreationPage extends StatefulWidget {
   @override
   _GoalCreationPageState createState() => _GoalCreationPageState();
+
 }
 
 class _GoalCreationPageState extends State<GoalCreationPage> {

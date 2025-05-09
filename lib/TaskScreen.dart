@@ -48,7 +48,6 @@ class _TaskScreenState extends State<TaskScreen> {
             'endDate': doc['endDate'],
             'endTime': doc['endTime'],
             'frequency': doc['frequency'],
-            'reminder': doc['reminder'],
             'startDate': doc['startDate'],
             'startTime': doc['startTime'],
             'title': doc['title'],
