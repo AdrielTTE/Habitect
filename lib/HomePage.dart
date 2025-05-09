@@ -4,6 +4,7 @@ import 'package:habitect/profile.dart';
 import 'package:habitect/streakTracking.dart';
 import 'goal_creation_page.dart';
 import 'home.dart';
+import 'calendar_page.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -31,6 +32,7 @@ class _HomePageState extends State<HomePage> {
         items: const <Widget>[
           Icon(Icons.home, size: 26, color: Colors.white),
           Icon(Icons.book_sharp, size: 26, color: Colors.white),
+          Icon(Icons.calendar_today, size:26, color: Colors.white),
           Icon(Icons.analytics, size: 26, color: Colors.white),
           Icon(Icons.person, size: 26, color: Colors.white),
         ],
@@ -51,9 +53,11 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return GoalCreationPage(); // Message page content
       case 2:
-        return StreakTracking(title: '',);
+        return CalendarScreen();
       case 3:
-        return ProfilePage(); // Profile screen placeholder
+        return StreakTracking(title: '',);// Profile screen placeholder
+      case 4:
+        return ProfilePage();
       default:
         return Home_Screen(); // Default to home page
     }
