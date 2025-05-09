@@ -227,10 +227,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _fetchEvents();
   }
 
-  void _setYearRange(int year) {
+  /*void _setYearRange(int year) {
     _startDate = DateTime(year, 1, 1);
     _endDate = DateTime(year, 12, 31);
-  }
+  } */
 
 
   @override
