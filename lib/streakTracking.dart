@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'BarGraph.dart';
 import 'GraphWidgets.dart';
 
 class StreakTracking extends StatefulWidget {
@@ -255,6 +254,7 @@ class _StreakTrackingState extends State<StreakTracking> {
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0, // Removing shadow for a cleaner look
+        automaticallyImplyLeading: false, // Prevent the back arrow from appearing
       ),
       body: SingleChildScrollView(
         // Wrap the content in SingleChildScrollView

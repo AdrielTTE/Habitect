@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:habitect/profile.dart';
+import 'package:habitect/streakTracking.dart';
+import 'package:habitect/streakTracking.dart';
 import 'package:habitect/stream_note.dart';
-
-import 'TaskScreen.dart';
 import 'add_note_screen.dart';
+import 'calendar_page.dart';
+import 'goal_creation_page.dart'; // Import the Goal Page
 import 'constants.dart';
 
 class Home_Screen extends StatefulWidget {
@@ -19,27 +22,6 @@ class _Home_ScreenState extends State<Home_Screen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home Page'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          // Avatar in the app bar
-          SizedBox(width: 16),
-          // Add the IconButton to navigate to TaskScreen
-          IconButton(
-            icon: Icon(Icons.task),  // Icon for TaskScreen
-            onPressed: () {
-              // Navigate to TaskScreen when clicked
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => TaskScreen(),
-              ));
-            },
-          ),
-        ],
-      ),
-
       backgroundColor: backgroundColors,
       floatingActionButton: Visibility(
         visible: show,
@@ -80,8 +62,54 @@ class _Home_ScreenState extends State<Home_Screen> {
                     width: 350,
                   ),
                 ),
-                Text("Daily To Do List", style: TextStyle(fontSize: 18)),
-                // Stream Notes (for completed tasks, for example)
+                // Daily To Do List Text
+
+                // 4 Box with Icons (Book, Calendar, User, Time)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Book Icon - Goal Page
+                      _buildBox(Icons.book, "Goal", () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => GoalCreationPage()),
+                        );
+                      }),
+                      // Calendar Icon - Calendar Page
+                      _buildBox(Icons.calendar_today, "Calendar", () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => CalendarScreen()),
+                        );
+                      }),
+                      // User Icon - Summary Page
+                      _buildBox(Icons.analytics, "Summary", () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => StreakTracking(title: '',)),
+                        );
+                      }),
+                      // Time Icon - User Page
+                      _buildBox(Icons.person, "User", () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ProfilePage()),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "Daily To Do List",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                // Stream Notes (for completed tasks)
                 Stream_note(false),
                 Text(
                   'isDone',
@@ -91,10 +119,45 @@ class _Home_ScreenState extends State<Home_Screen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                // Stream Notes (for tasks to be done)
                 Stream_note(true),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to create each icon box
+  Widget _buildBox(IconData icon, String label, Function onTap) {
+    return GestureDetector(
+      onTap: () => onTap(),
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade300,
+              spreadRadius: 2,
+              blurRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 30, color: Colors.grey),
+            SizedBox(height: 5),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: Colors.black),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
