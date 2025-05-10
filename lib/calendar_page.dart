@@ -41,7 +41,7 @@ class CalendarEvent {
   factory CalendarEvent.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final dateFormatter = DateFormat('M/d/yyyy');
-    final timeFormatter = DateFormat('h:mm a');
+    final timeFormatter = DateFormat('h a');
 
     // Parse start date/time
     final startDate = dateFormatter.parse(data['startDate'] ?? '1/1/1970');
