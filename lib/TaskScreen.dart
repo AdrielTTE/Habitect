@@ -1,7 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-
+import 'ModifyTaskScreen.dart';
 import 'TaskDetailScreen.dart';
 
 class TaskScreen extends StatefulWidget {
@@ -16,8 +16,8 @@ class _TaskScreenState extends State<TaskScreen> {
   late String uid;
   bool isLoading = true;
   List<Map<String, dynamic>> tasks = [];
-  Map<String, dynamic>? lastClickedTask; // To store the last clicked task
-  String? lastClickedTimestamp; // To store the timestamp when the button is clicked
+  Map<String, dynamic>? lastClickedTask;
+  String? lastClickedTimestamp;
 
   @override
   void initState() {
@@ -25,7 +25,7 @@ class _TaskScreenState extends State<TaskScreen> {
     fetchTasks();
   }
 
-  // Fetch tasks based on UID
+  // Fetch tasks from Firestore
   Future<void> fetchTasks() async {
     User? user = _auth.currentUser;
     if (user != null) {
@@ -42,7 +42,7 @@ class _TaskScreenState extends State<TaskScreen> {
 
         List<Map<String, dynamic>> fetchedTasks = snapshot.docs.map((doc) {
           return {
-            'id': doc.id, // Get the document ID for delete and update operations
+            'id': doc.id,
             'category': doc['category'],
             'createdAt': doc['createdAt'],
             'endDate': doc['endDate'],
@@ -67,18 +67,17 @@ class _TaskScreenState extends State<TaskScreen> {
     }
   }
 
-  // Function to record task click in Firebase
+  // Record task click
   Future<void> recordTaskClick(Map<String, dynamic> task) async {
     User? user = _auth.currentUser;
     if (user != null) {
       try {
-        // Create a new record in the taskLogs collection
         await _firestore.collection('users')
             .doc(user.uid)
             .collection('taskLogs')
             .add({
           'taskName': task['title'],
-          'clickedAt': FieldValue.serverTimestamp(),  // Record the current timestamp
+          'clickedAt': FieldValue.serverTimestamp(),
           'category': task['category'],
           'startTime': task['startTime'],
         });
@@ -89,106 +88,156 @@ class _TaskScreenState extends State<TaskScreen> {
     }
   }
 
-  // Function to delete a task
+  // Delete task
   Future<void> deleteTask(String taskId) async {
-    try {
-      await _firestore.collection('users')
-          .doc(uid)
-          .collection('tasks')
-          .doc(taskId)
-          .delete();
-      print('Task deleted successfully!');
-      setState(() {
-        tasks.removeWhere((task) => task['id'] == taskId);
-      });
-    } catch (e) {
-      print('Error deleting task: $e');
+    bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirm Deletion'),
+          content: Text('Are you sure you want to delete this task?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      try {
+        await _firestore.collection('users')
+            .doc(uid)
+            .collection('tasks')
+            .doc(taskId)
+            .delete();
+        print('Task deleted successfully!');
+        setState(() {
+          tasks.removeWhere((task) => task['id'] == taskId);
+        });
+      } catch (e) {
+        print('Error deleting task: $e');
+      }
     }
   }
 
-  // Function to update a task
-  Future<void> updateTask(String taskId, Map<String, dynamic> updatedData) async {
-    try {
-      await _firestore.collection('users')
-          .doc(uid)
-          .collection('tasks')
-          .doc(taskId)
-          .update(updatedData);
-      print('Task updated successfully!');
-      fetchTasks(); // Re-fetch tasks after updating
-    } catch (e) {
-      print('Error updating task: $e');
-    }
+  // Navigate to ModifyTaskScreen
+  void modifyTask(String taskId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ModifyTaskScreen(taskId: taskId),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Your Tasks")),
+      appBar: AppBar(
+        backgroundColor: Colors.orange, // Orange app bar
+        title: Text(
+          "Your Tasks",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+      ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : Column(
         children: [
           Expanded(
             child: tasks.isEmpty
-                ? Center(child: Text('No tasks available.'))
+                ? Center(child: Text('No tasks available.', style: TextStyle(fontSize: 18, color: Colors.grey)))
                 : ListView.builder(
               itemCount: tasks.length,
               itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(tasks[index]['title']),
-                  subtitle: Text("Category: ${tasks[index]['category']}"),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Task Click button (leading icon button)
-                      IconButton(
-                        icon: Icon(Icons.check),
-                        onPressed: () {
-                          recordTaskClick(tasks[index]);
-                          setState(() {
-                            lastClickedTask = tasks[index]; // Store the last clicked task
-                            lastClickedTimestamp = DateTime.now().toString(); // Store the timestamp
-                          });
-                        },
-                      ),
-                    ],
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  onTap: () {
-                    // Navigate to TaskDetailScreen and pass the task data
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => TaskDetailScreen(
-                          task: tasks[index],
+                  child: ListTile(
+                    contentPadding: EdgeInsets.all(16),
+                    title: Text(
+                      tasks[index]['title'],
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      "Category: ${tasks[index]['category']}",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.check, color: Colors.green),
+                          onPressed: () {
+                            recordTaskClick(tasks[index]);
+                            setState(() {
+                              lastClickedTask = tasks[index];
+                              lastClickedTimestamp = DateTime.now().toString();
+                            });
+                          },
                         ),
-                      ),
-                    );
-                  },
+                        IconButton(
+                          icon: Icon(Icons.edit, color: Colors.orange),
+                          onPressed: () {
+                            modifyTask(tasks[index]['id']);
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            deleteTask(tasks[index]['id']);
+                          },
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => TaskDetailScreen(
+                            task: tasks[index],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
           ),
           if (lastClickedTask != null)
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(16.0),
               child: Container(
                 padding: EdgeInsets.all(10),
-                color: Colors.grey[200],
+                color: Colors.grey[100],
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Last Clicked Task:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     SizedBox(height: 5),
                     Text('Title: ${lastClickedTask!['title']}'),
                     Text('Category: ${lastClickedTask!['category']}'),
                     Text('Start Time: ${lastClickedTask!['startTime']}'),
                     Text('Start Date: ${lastClickedTask!['startDate']}'),
-                    Text('End Date: ${lastClickedTask!['endDate']}'),
+                    if (lastClickedTask!['endDate'] != null)
+                      Text('End Date: ${lastClickedTask!['endDate']}'),
                     SizedBox(height: 10),
-                    // Display the timestamp when button was clicked
                     Text('Task clicked at: $lastClickedTimestamp'),
                   ],
                 ),

@@ -166,10 +166,6 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text("Goal Creation"),
-          centerTitle: true,
-        ),
         body: Padding(
           padding: const EdgeInsets.all(15.0),
           child: Form(
