@@ -43,8 +43,6 @@ class CalendarEvent {
     final dateFormatter = DateFormat('M/d/yyyy');
     final timeFormatter = DateFormat('h:mm a');
 
-
-
     // Parse start date/time
     final startDate = dateFormatter.parse(data['startDate'] ?? '1/1/1970');
     final startTime = timeFormatter.parse(data['startTime'] ?? '12:00 AM');
@@ -155,12 +153,17 @@ class Reminder {
   });
 }
 
-class CalendarService {
+class AppointmentDataSource {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'events';
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final String _collection = 'appointments';
 
-  Stream<List<CalendarEvent>> getCalendarEvents() {
-    return _firestore.collection(_collection)
+  // Get appointments from Firestore
+  Stream<List<CalendarEvent>> getAppointments() {
+    return _firestore
+        .collection('users')
+        .doc(_auth.currentUser?.uid)
+        .collection(_collection)
         .orderBy('createdAt', descending: true)
         .limit(100)
         .snapshots()
@@ -169,23 +172,23 @@ class CalendarService {
         .toList());
   }
 
-  Stream<List<CalendarEvent>> getEventsByCategory(String category) {
-    return _firestore.collection(_collection)
-        .where('category', isEqualTo: category)
+  // Get appointments by date range
+  Stream<List<CalendarEvent>> getAppointmentsByDateRange(DateTime start, DateTime end) {
+    // We'll query by startDate field which contains the date string
+    // This is a simplified approach - ideally you'd store dates as timestamps for range queries
+    return _firestore
+        .collection('users')
+        .doc(_auth.currentUser?.uid)
+        .collection(_collection)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => CalendarEvent.fromFirestore(doc))
-        .toList());
-  }
-
-  Stream<List<CalendarEvent>> getEventsByDateRange(DateTime start, DateTime end) {
-    return _firestore.collection(_collection)
-        .where('from', isGreaterThanOrEqualTo: start)
-        .where('from', isLessThanOrEqualTo: end)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => CalendarEvent.fromFirestore(doc))
-        .toList());
+        .map((snapshot) {
+      final events = snapshot.docs.map((doc) => CalendarEvent.fromFirestore(doc)).toList();
+      // Filter the events in memory based on date range
+      return events.where((event) {
+        return (event.from.isAfter(start) || event.from.isAtSameMomentAs(start)) &&
+            (event.from.isBefore(end) || event.from.isAtSameMomentAs(end));
+      }).toList();
+    });
   }
 }
 
@@ -198,40 +201,26 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   final CalendarController _calendarController = CalendarController();
-  final CalendarService _calendarService = CalendarService();
+  final AppointmentDataSource _appointmentDataSource = AppointmentDataSource();
   CalendarView _currentView = CalendarView.month;
-  int _selectedYear = DateTime.now().year;  // Track selected year
+  int _selectedYear = DateTime.now().year; // Track selected year
   _EventDataSource? _events;
   bool _isLoading = true;
   String? _errorMessage;
   StreamSubscription? _eventSubscription;
   DateTime? _startDate;
   DateTime? _endDate;
-  final List<String> categories = [
-    'All', 'Daily', 'Family', 'Groceries',
-    'Exercise', 'Works', 'Schools', 'Others'
-  ];
-  String _selectedCategory = 'Daily';
-
+  DateTime? _selectedDate; // Track the selected date
 
   @override
   void initState() {
     super.initState();
     _calendarController.view = _currentView;
-    _calendarController.displayDate = DateTime(_selectedYear); // Set initial display date
-
-
-
+    _selectedDate = DateTime.now(); // Initialize with current date
+    _calendarController.displayDate = _selectedDate; // Set initial display date
     FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
-    //_setYearRange(_selectedYear); // Initialize with current year's range
-    _fetchEvents();
+    _fetchAppointments();
   }
-
-  /*void _setYearRange(int year) {
-    _startDate = DateTime(year, 1, 1);
-    _endDate = DateTime(year, 12, 31);
-  } */
-
 
   @override
   void dispose() {
@@ -240,39 +229,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
-  /*
-  Future<void> _selectDateRange(BuildContext context) async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      initialDateRange: _startDate != null && _endDate != null
-          ? DateTimeRange(start: _startDate!, end: _endDate!)
-          : null,
-    );
-    if (picked != null) {
-      setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
-        _selectedCategory = 'All';
-      });
-      _fetchEvents();
-    }
-  } */
-
-  Future<void> _fetchEvents() async {
+  Future<void> _fetchAppointments() async {
     setState(() => _isLoading = true);
     _eventSubscription?.cancel();
 
-    Stream<List<CalendarEvent>> stream;
-
-    if (_selectedCategory == 'All') {
-      stream = _calendarService.getCalendarEvents();
-    } else if (_startDate != null && _endDate != null) {
-      stream = _calendarService.getEventsByDateRange(_startDate!, _endDate!);
-    } else {
-      stream = _calendarService.getEventsByCategory(_selectedCategory);
-    }
+    Stream<List<CalendarEvent>> stream = _appointmentDataSource.getAppointments();
 
     _eventSubscription = stream.listen(
           (events) => setState(() {
@@ -284,7 +245,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _isLoading = false;
         _errorMessage = e is FirebaseException
             ? e.message ?? 'Firestore error occurred'
-            : 'Failed to load events';
+            : 'Failed to load appointments';
       }),
     );
   }
@@ -338,12 +299,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 if (newValue != null) {
                   setState(() {
                     _selectedYear = newValue;
-                    // Update calendar display to show the selected year
-                    _calendarController.displayDate = DateTime(newValue);
-                    // Set date range for event filtering
+                    // Update selected date to stay within the selected year
+                    _selectedDate = DateTime(newValue, _selectedDate?.month ?? 1,
+                        _selectedDate?.day ?? 1);
+                    _calendarController.displayDate = _selectedDate;
                     _startDate = DateTime(newValue, 1, 1);
                     _endDate = DateTime(newValue, 12, 31);
-                    _fetchEvents();
+                    _fetchAppointments();
                   });
                 }
               },
@@ -354,19 +316,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
             onSelected: (view) => setState(() {
               _currentView = view;
               _calendarController.view = view;
-              // Keep the display date consistent when changing views
-              _calendarController.displayDate = DateTime(_selectedYear);
+              // Ensure the selected date is displayed in the new view
+              _calendarController.displayDate = _selectedDate;
             }),
             itemBuilder: (context) => [
               const PopupMenuItem(
-                  value: CalendarView.month,
-                  child: Text('Month View')),
+                  value: CalendarView.month, child: Text('Month View')),
               const PopupMenuItem(
-                  value: CalendarView.week,
-                  child: Text('Week View')),
+                  value: CalendarView.week, child: Text('Week View')),
               const PopupMenuItem(
-                  value: CalendarView.day,
-                  child: Text('Day View')),
+                  value: CalendarView.day, child: Text('Day View')),
             ],
           ),
         ],
@@ -374,7 +333,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       body: _buildCalendarBody(),
     );
   }
-
 
   Widget _buildCalendarBody() {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
@@ -385,12 +343,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
       view: _currentView,
       dataSource: _events,
       onTap: (details) {
+        // Capture the selected date when a day is tapped in month view
+        if (_currentView == CalendarView.month && details.date != null) {
+          setState(() {
+            _selectedDate = details.date;
+            _calendarController.displayDate = _selectedDate;
+          });
+        }
+        // Show event details if an appointment is tapped
         if (details.appointments?.isNotEmpty ?? false) {
           _showEventDetails(details.appointments!.first as CalendarEvent);
         }
       },
+      onViewChanged: (ViewChangedDetails details) {
+        // Ensure the selected date is maintained when navigating in month view
+        if (_currentView == CalendarView.month &&
+            details.visibleDates.isNotEmpty) {
+          // Check if the selected date is within the visible dates
+          final visibleStart = details.visibleDates.first;
+          final visibleEnd = details.visibleDates.last;
+          if (_selectedDate != null &&
+              (_selectedDate!.isBefore(visibleStart) ||
+                  _selectedDate!.isAfter(visibleEnd))) {
+            // Adjust selected date to the first visible date if it's outside the range
+            setState(() {
+              _selectedDate = visibleStart;
+              _calendarController.displayDate = _selectedDate;
+            });
+          }
+        }
+      },
       headerStyle: const CalendarHeaderStyle(
-        textAlign: TextAlign.center, // Ensures the title is centered
+        textAlign: TextAlign.center,
       ),
       monthViewSettings: const MonthViewSettings(
         showAgenda: true,
@@ -399,7 +383,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       timeSlotViewSettings: const TimeSlotViewSettings(
         startHour: 0,
         endHour: 24,
-        timeFormat: 'h:mm a',
+        timeFormat: 'h a',
         timeInterval: Duration(hours: 1),
         minimumAppointmentDuration: Duration(hours: 1),
         dayFormat: 'EEE',
@@ -409,7 +393,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildAppointment(BuildContext context, CalendarAppointmentDetails details) {
+  Widget _buildAppointment(
+      BuildContext context, CalendarAppointmentDetails details) {
     final event = details.appointments.first as CalendarEvent;
     return Container(
       decoration: BoxDecoration(
@@ -446,8 +431,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Text(_errorMessage!, textAlign: TextAlign.center),
           const SizedBox(height: 16),
           ElevatedButton(
-              onPressed: _fetchEvents,
-              child: const Text('Retry')),
+              onPressed: _fetchAppointments, child: const Text('Retry')),
         ],
       ),
     );
