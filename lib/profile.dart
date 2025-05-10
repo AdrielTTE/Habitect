@@ -256,9 +256,15 @@ class _ProfilePageState extends State<ProfilePage> {
             isEditing
                 ? ElevatedButton(
               onPressed: _updateProfileData,
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(Colors.orange),
+              ),
               child: const Text("Save Changes"),
             )
                 : ElevatedButton(
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(Colors.orange),
+              ),
               onPressed: () {
                 setState(() {
                   isEditing = true;
@@ -269,19 +275,30 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _askChangePassword,
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(Colors.orange),
+              ),
               child: const Text("Change Password"),
             ),
             if (isPasswordChangeRequested)
+
               Column(
                 children: [
+                  SizedBox(height:40),
                   TextField(
                     controller: _newPasswordController,
                     decoration: const InputDecoration(
+                      filled: true,
+                      fillColor: Color(0x4DFFB84D) ,
                       labelText: "New Password",
                     ),
                   ),
+                  SizedBox(height:20),
                   ElevatedButton(
                     onPressed: _changePassword,
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.orange),
+                    ),
                     child: const Text("Save New Password"),
                   ),
                 ],
@@ -302,6 +319,8 @@ class _ProfilePageState extends State<ProfilePage> {
       child: TextField(
         controller: controller,
         decoration: InputDecoration(
+          filled: true,
+          fillColor: Color(0x4DFFB84D) ,
           labelText: label,
           border: const OutlineInputBorder(),
         ),

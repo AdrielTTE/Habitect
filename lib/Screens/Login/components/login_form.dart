@@ -55,7 +55,8 @@ class _LoginFormState extends State<LoginForm> {
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(hintText: 'Email',
+            decoration: const InputDecoration(
+                hintText: 'Email',
                 filled: true,
                 fillColor: Color(0x4DFFB84D)),
             validator: (email) {

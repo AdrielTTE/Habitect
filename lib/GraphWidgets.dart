@@ -23,7 +23,7 @@ class GraphWidgets {
   ];
 
   final columns = [
-    '60', '50', '40', '30', '20', '10', '0'
+    '0', '10', '20', '30', '40', '50', '60'
 
   ];
 
@@ -152,6 +152,7 @@ class GraphWidgets {
                     HeatmapItem(
                         value: r.nextDouble() * 6,
                         xAxisLabel: columns[col],
+
                         yAxisLabel: rows[row]),
               ]),
               )

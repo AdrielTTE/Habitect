@@ -204,11 +204,14 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                 TextFormField(
                   controller: _taskController,
                   decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Color(0x4DFFB84D) ,
                     hintText: "Enter your task",
                     border: OutlineInputBorder(
                       borderSide: BorderSide(width: 4),
                       borderRadius: BorderRadius.circular(40.0),
                     ),
+
                   ),
                   validator: (v) => (v?.isEmpty ?? true) ? 'Please enter a task name' : null,
                 ),
@@ -222,6 +225,8 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                       controller: _dateController,
                       readOnly: true,
                       decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Color(0x4DFFB84D) ,
                         hintText: "Select date",
                         suffixIcon: IconButton(
                           icon: Icon(Icons.calendar_today),
@@ -246,6 +251,8 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                       controller: _timeController,
                       readOnly: true,
                       decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Color(0x4DFFB84D) ,
                         hintText: "Select time",
                         suffixIcon: IconButton(
                           icon: Icon(Icons.access_time),
@@ -280,7 +287,11 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                     child: TextFormField(
                       controller: _endDateController,
                       readOnly: true,
+
                       decoration: InputDecoration(
+
+                        filled: true,
+                        fillColor: Color(0x4DFFB84D) ,
                         hintText: "Select end date",
                         suffixIcon: IconButton(
                           icon: Icon(Icons.calendar_today),
@@ -309,6 +320,8 @@ class _GoalCreationPageState extends State<GoalCreationPage> {
                       controller: _endTimeController,
                       readOnly: true,
                       decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Color(0x4DFFB84D) ,
                         hintText: "Select end time",
                         suffixIcon: IconButton(
                           icon: Icon(Icons.access_time),
