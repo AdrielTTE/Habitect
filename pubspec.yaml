@@ -51,6 +51,7 @@ dependencies:
   flutter_native_splash: ^2.4.6
   syncfusion_flutter_calendar: ^29.1.41
   syncfusion_flutter_core: ^29.1.41
+  d_chart: ^3.0.0
 
 
 
