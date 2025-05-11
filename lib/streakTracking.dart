@@ -1,3 +1,4 @@
+import 'package:d_chart/d_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -17,7 +18,7 @@ class _StreakTrackingState extends State<StreakTracking> {
   String selectedYear = '';
   String selectedMonth = '';
   int monthNumber = 1;
-  int yearNumber=0;
+  int yearNumber = 0;
 
   // Year options
   List<String> years = ['2022', '2023', '2024', '2025'];
@@ -35,7 +36,7 @@ class _StreakTrackingState extends State<StreakTracking> {
     'September',
     'October',
     'November',
-    'December'
+    'December',
   ];
 
   // Get the current date and month
@@ -68,8 +69,9 @@ class _StreakTrackingState extends State<StreakTracking> {
   int othersCat = 0;
   int allTaskCount = 0;
 
-  // To store task completion by hour (heatmap data)
-  Map<int, int> taskHours = {};
+  List<int> taskHours = [];
+  List<int> taskMinutes = [];
+  List<NumericData> taskTime = [];
 
   @override
   void initState() {
@@ -77,8 +79,8 @@ class _StreakTrackingState extends State<StreakTracking> {
 
     // Automatically set the selected year and month based on the system date
     selectedYear = currentYear.toString();
-    selectedMonth = months[currentMonth - 1]; // Month is 1-based, list is 0-based
-
+    selectedMonth =
+        months[currentMonth - 1]; // Month is 1-based, list is 0-based
 
     // Fetch the "To Do" tasks when the screen is initialized
     if (selectedCategory == 'To Do') {
@@ -92,13 +94,13 @@ class _StreakTrackingState extends State<StreakTracking> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-
         // Fetch all tasks from Firestore
-        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('tasks')
-            .get(); // Fetching all tasks
+        QuerySnapshot querySnapshot =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('tasks')
+                .get(); // Fetching all tasks
 
         goalCount = querySnapshot.docs.length;
         // Initialize a list to store the filtered tasks
@@ -112,8 +114,12 @@ class _StreakTrackingState extends State<StreakTracking> {
           List<String> dateParts = taskDateString.split('/');
 
           // Extract the month and year as integers
-          int taskMonth = int.parse(dateParts[0]); // Extract month (e.g., 5 from "5/13/2025")
-          int taskYear = int.parse(dateParts[2]); // Extract year (e.g., 2025 from "5/13/2025")
+          int taskMonth = int.parse(
+            dateParts[0],
+          ); // Extract month (e.g., 5 from "5/13/2025")
+          int taskYear = int.parse(
+            dateParts[2],
+          ); // Extract year (e.g., 2025 from "5/13/2025")
 
           // Debug: Print the extracted month and year
           print('Task Month: $taskMonth, Task Year: $taskYear');
@@ -122,8 +128,7 @@ class _StreakTrackingState extends State<StreakTracking> {
           if (taskMonth == monthNumber && taskYear == yearNumber) {
             // If the task's month and year match the selected month and year, add it to filteredDocs
             filteredDocs.add(doc);
-         }
-
+          }
         });
 
         setState(() {
@@ -202,7 +207,6 @@ class _StreakTrackingState extends State<StreakTracking> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-
         // Fetch tasks from Firestore
         QuerySnapshot querySnapshot =
             await FirebaseFirestore.instance
@@ -223,16 +227,19 @@ class _StreakTrackingState extends State<StreakTracking> {
               _todoTasks.where((task) => task['isDon'] == false).length;
 
           // Initialize the taskHours map to track tasks per hour
-          taskHours.clear();
+
           _todoTasks.forEach((task) {
             String timeString =
                 task['time'] ?? ''; // Assuming it's in the format "HH:mm"
             if (timeString.isNotEmpty) {
               // Validate and extract the hour part from time (e.g., "13:30" -> 13)
               int hour = int.tryParse(timeString.split(':')[0]) ?? 0;
-              if (hour >= 0 && hour < 24) {
+              int minute = int.tryParse(timeString.split(':')[1]) ?? 0;
+
+              if (hour >= 0 && hour < 24 && task['isDon'] == false) {
                 // Increment the task count for the respective hour
-                taskHours[hour] = (taskHours[hour] ?? 0) + 1;
+                taskHours.add(hour);
+                taskMinutes.add(minute);
               }
             }
           });
@@ -254,7 +261,8 @@ class _StreakTrackingState extends State<StreakTracking> {
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0, // Removing shadow for a cleaner look
-        automaticallyImplyLeading: false, // Prevent the back arrow from appearing
+        automaticallyImplyLeading:
+            false, // Prevent the back arrow from appearing
       ),
       body: SingleChildScrollView(
         // Wrap the content in SingleChildScrollView
@@ -321,7 +329,6 @@ class _StreakTrackingState extends State<StreakTracking> {
             value: selectedMonth,
             items: _getAvailableMonths(),
             onChanged: (value) {
-
               setState(() {
                 selectedMonth = value!;
                 switch (selectedMonth) {
@@ -377,8 +384,6 @@ class _StreakTrackingState extends State<StreakTracking> {
             },
             dropdownColor: dropdownColor,
           ),
-
-
       ],
     );
   }
@@ -437,10 +442,29 @@ class _StreakTrackingState extends State<StreakTracking> {
             style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          GraphWidgets().buildGraphSection(selectedCategory, notDoneCount, doneCount, goalCount, ongoingCount, dailyCount, monthlyCount, weeklyCount, customCount, dailyCat, familyCat, worksCat, schoolsCat, groceriesCat, exerciseCat, othersCat),
+          GraphWidgets().buildGraphSection(
+            selectedCategory,
+            notDoneCount,
+            doneCount,
+            goalCount,
+            ongoingCount,
+            dailyCount,
+            monthlyCount,
+            weeklyCount,
+            customCount,
+            dailyCat,
+            familyCat,
+            worksCat,
+            schoolsCat,
+            groceriesCat,
+            exerciseCat,
+            othersCat,
+            taskHours,
+            taskMinutes,
+          ),
 
           const SizedBox(height: 20),
-            // BarGraph().buildBarGraph(),
+          // BarGraph().buildBarGraph(),
         ],
       );
     } else {
@@ -453,7 +477,26 @@ class _StreakTrackingState extends State<StreakTracking> {
             style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          GraphWidgets().buildGraphSection(selectedCategory, notDoneCount, doneCount, goalCount, ongoingCount, dailyCount, monthlyCount, weeklyCount, customCount, dailyCat, familyCat, worksCat, schoolsCat, groceriesCat, exerciseCat, othersCat),
+          GraphWidgets().buildGraphSection(
+            selectedCategory,
+            notDoneCount,
+            doneCount,
+            goalCount,
+            ongoingCount,
+            dailyCount,
+            monthlyCount,
+            weeklyCount,
+            customCount,
+            dailyCat,
+            familyCat,
+            worksCat,
+            schoolsCat,
+            groceriesCat,
+            exerciseCat,
+            othersCat,
+            taskHours,
+            taskMinutes,
+          ),
           const SizedBox(height: 20),
           const SizedBox(height: 20),
           const SizedBox(height: 10),
@@ -488,44 +531,6 @@ class _StreakTrackingState extends State<StreakTracking> {
           ),
         );
       },
-    );
-  }
-
-  // Build the heatmap for task times
-  Widget _buildHeatmap() {
-    return Container(
-      height: 250,
-      child: GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 24, // Represent each hour of the day
-          childAspectRatio: 1.0,
-        ),
-        itemCount: 24,
-        itemBuilder: (context, index) {
-          // Get task count for each hour
-          int taskCount = taskHours[index] ?? 0;
-
-          return Container(
-            margin: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color:
-                  taskCount > 0
-                      ? Colors.green.withOpacity(taskCount / 5)
-                      : Colors.grey,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                '$taskCount',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 
