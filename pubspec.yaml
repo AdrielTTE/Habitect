@@ -48,6 +48,8 @@ dependencies:
   rxdart: ^0.28.0
   flutter_image_compress: ^2.4.0
   fl_heatmap: ^0.4.5
+  sqflite: ^2.0.0+4
+
   flutter_native_splash: ^2.4.6
   syncfusion_flutter_calendar: ^29.1.41
   syncfusion_flutter_core: ^29.1.41
@@ -132,4 +134,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
