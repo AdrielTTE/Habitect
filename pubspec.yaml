@@ -48,6 +48,7 @@ dependencies:
   rxdart: ^0.28.0
   flutter_image_compress: ^2.4.0
   fl_heatmap: ^0.4.5
+  sqflite: ^2.0.0+4
 
   syncfusion_flutter_calendar: ^29.1.41
   syncfusion_flutter_core: ^29.1.41
