@@ -118,7 +118,7 @@ class CalendarEvent {
     return switch (category) {
       'Daily' => Colors.red[300]!,
       'Family' => Colors.green[300]!,
-      'Groceries' => Colors.grey[350]!,
+      'Groceries' => Colors.grey[300]!,
       'Exercise' => Colors.purple[200]!,
       'Works' => Colors.blue[200]!,
       'Schools' => Colors.orange[200]!,
