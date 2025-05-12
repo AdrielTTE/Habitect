@@ -36,44 +36,70 @@ class CalendarEvent {
   factory CalendarEvent.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
-    final fromTimestamp = data['from'] as Timestamp?;
-    final toTimestamp = data['to'] as Timestamp?;
+    final startDateStr = data['startDate'] as String? ?? '';
+    final startTimeStr = data['startTime'] as String? ?? '';
+    final endDateStr = data['endDate'] as String? ?? '';
+    final endTimeStr = data['endTime'] as String? ?? '';
+    final frequencyStr = data['frequency']?.toString() ?? '';
 
-    final fromDate = fromTimestamp?.toDate() ?? DateTime.now();
-    final toDate = toTimestamp?.toDate() ?? fromDate.add(const Duration(hours: 1));
-
-    final frequencyData = data['frequency'] as Map<String, dynamic>? ?? {};
-    final frequency = Frequency(
-      type: frequencyData['type']?.toString() ?? '',
-      unit: frequencyData['unit']?.toString() ?? '',
-      interval: (frequencyData['interval'] as num?)?.toInt() ?? 1,
-    );
-
-    final reminderData = data['reminder'] as Map<String, dynamic>?;
-    final reminder = reminderData != null
-        ? Reminder(
-      type: reminderData['type']?.toString() ?? '',
-      value: (reminderData['value'] as num?)?.toInt() ?? 0,
-    )
-        : null;
+    final from = _parseDateTime(startDateStr, startTimeStr);
+    final to = _parseDateTime(endDateStr, endTimeStr);
 
     final category = data['category']?.toString() ?? 'General';
     final background = _getCategoryColor(category);
+
+    // Calculate the day of the week for weekly recurrences
+    String? byDay;
+    if (frequencyStr.toLowerCase() == 'weekly') {
+      byDay = _getDayAbbreviation(from.weekday);
+    }
 
     return CalendarEvent(
       id: doc.id,
       title: data['title']?.toString() ?? 'No Title',
       category: category,
       createdAt: data['createdAt'] as Timestamp?,
-      fromTimestamp: fromTimestamp ?? Timestamp.fromDate(fromDate),
-      toTimestamp: toTimestamp ?? Timestamp.fromDate(toDate),
-      from: fromDate,
-      to: toDate,
+      fromTimestamp: Timestamp.fromDate(from),
+      toTimestamp: Timestamp.fromDate(to),
+      from: from,
+      to: to,
       background: background,
-      isAllDay: frequency.type.toLowerCase() == 'daily',
-      frequency: frequency,
-      reminder: reminder,
+      isAllDay: false, // Adjust based on your logic
+      frequency: Frequency(type: frequencyStr, unit: '', interval: 1, byDay: byDay),
+      reminder: null, // Adjust as needed
     );
+  }
+
+  // Helper method to convert a weekday number to a two-letter abbreviation
+  static String _getDayAbbreviation(int weekday) {
+    return switch (weekday) {
+      DateTime.monday => 'MO',
+      DateTime.tuesday => 'TU',
+      DateTime.wednesday => 'WE',
+      DateTime.thursday => 'TH',
+      DateTime.friday => 'FR',
+      DateTime.saturday => 'SA',
+      DateTime.sunday => 'SU',
+      _ => 'MO', // Default to Monday if something goes wrong
+    };
+  }
+
+
+
+  static DateTime _parseDateTime(String dateStr, String timeStr) {
+    try {
+      final date = DateFormat('M/d/yyyy').parse(dateStr);
+      final time = DateFormat('h:mm a').parse(timeStr);
+      return DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    } catch (e) {
+      return DateTime.now();
+    }
   }
 
   static Color _getCategoryColor(String category) {
@@ -94,11 +120,13 @@ class Frequency {
   final String type;
   final String unit;
   final int interval;
+  final String? byDay; // Add this to specify the day of the week for weekly recurrences
 
   Frequency({
     required this.type,
     required this.unit,
     required this.interval,
+    this.byDay, // Optional parameter for weekly recurrences
   });
 
   String? get recurrenceRule {
@@ -111,7 +139,15 @@ class Frequency {
       'custom' => unit.toUpperCase(),
       _ => null,
     };
-    return freq != null ? 'FREQ=$freq;INTERVAL=$interval' : null;
+    //return freq != null ? 'FREQ=$freq;INTERVAL=$interval' : null;
+    if (freq == null) return null;
+
+    // For weekly recurrences, include the BYDAY field if provided
+    if (freq == 'WEEKLY' && byDay != null) {
+      return 'FREQ=$freq;INTERVAL=$interval;BYDAY=$byDay';
+    }
+
+    return 'FREQ=$freq;INTERVAL=$interval';
   }
 }
 
@@ -213,10 +249,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final snapshot = await _firestore
           .collection('users')
           .doc(_auth.currentUser?.uid)
-          .collection('appointments')
-          .where('from', isGreaterThanOrEqualTo: startDate)
-          .where('from', isLessThanOrEqualTo: endDate)
-          .orderBy('from')
+          .collection('tasks')
+          .where('startDate', isGreaterThanOrEqualTo: DateFormat('M/d/yyyy').format(startDate))
+          .where('startDate', isLessThanOrEqualTo: DateFormat('M/d/yyyy').format(endDate))
+          .orderBy('startDate')
           .get();
 
       final appointments = snapshot.docs.map((doc) => CalendarEvent.fromFirestore(doc)).toList();
@@ -230,7 +266,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _isLoading = false;
         _errorMessage = e is FirebaseException
             ? e.message ?? 'Firestore error occurred'
-            : 'Failed to load appointments';
+            : 'Failed to load tasks';
       });
     }
   }
@@ -319,8 +355,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return SfCalendar(
       controller: _calendarController,
-      //view: _currentView,
-      view: CalendarView.schedule,
+      view: _currentView,
       dataSource: _events,
       onTap: (CalendarTapDetails details) {
         if (details.appointments != null && details.appointments!.isNotEmpty) {
@@ -337,18 +372,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       headerStyle: const CalendarHeaderStyle(
         textAlign: TextAlign.center,
       ),
-      // Month View Settings
       monthViewSettings: const MonthViewSettings(
         showAgenda: true,
         appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
       ),
-      // Schedule View Settings (for Week and Day views' agenda)
-      scheduleViewSettings: const ScheduleViewSettings(
-        //configure schedule-specific settings here only
-
-      ),
-
-
+      scheduleViewSettings: const ScheduleViewSettings(),
       timeSlotViewSettings: const TimeSlotViewSettings(
         startHour: 0,
         endHour: 24,
@@ -362,28 +390,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildAppointment(
-      BuildContext context, CalendarAppointmentDetails details) {
-    final event = details.appointments.first as CalendarEvent;
+  Widget _buildAppointment(BuildContext context, CalendarAppointmentDetails details) {
+    final appointment = details.appointments.first as Appointment; // Use Appointment type
     return Container(
       decoration: BoxDecoration(
-        color: event.background,
+        color: appointment.color, // Use the color from Appointment
         borderRadius: BorderRadius.circular(4),
       ),
       child: Center(
         child: _currentView == CalendarView.month
-            ? Text(event.title,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 10))
+            ? Text(
+          appointment.subject, // Use the subject from Appointment
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white, fontSize: 10),
+        )
             : Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(event.category,
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
+            Text(
+              appointment.notes?.split('Category: ').last ?? 'General', // Extract category from notes
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
             const SizedBox(height: 2),
-            Text(event.title,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
+            Text(
+              appointment.subject, // Use the subject from Appointment
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
           ],
         ),
       ),
