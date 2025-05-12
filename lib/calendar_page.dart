@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // Ensure intl is in your pubspec.yaml
+import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class CalendarEvent {
@@ -36,6 +36,9 @@ class CalendarEvent {
   factory CalendarEvent.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
+    // Debug: Print the raw data from Firestore
+    //print('Firestore Data for doc.id: ${doc.id}: $data');
+
     final startDateStr = data['startDate'] as String? ?? '';
     final startTimeStr = data['startTime'] as String? ?? '';
     final endDateStr = data['endDate'] as String? ?? '';
@@ -45,10 +48,13 @@ class CalendarEvent {
     final from = _parseDateTime(startDateStr, startTimeStr);
     final to = _parseDateTime(endDateStr, endTimeStr);
 
+    // Debug: Print the parsed DateTime values
+    //print('Parsed from (startDateStr: $startDateStr, startTimeStr: $startTimeStr): $from');
+
+
     final category = data['category']?.toString() ?? 'General';
     final background = _getCategoryColor(category);
 
-    // Calculate the day of the week for weekly recurrences
     String? byDay;
     if (frequencyStr.toLowerCase() == 'weekly') {
       byDay = _getDayAbbreviation(from.weekday);
@@ -64,13 +70,12 @@ class CalendarEvent {
       from: from,
       to: to,
       background: background,
-      isAllDay: false, // Adjust based on your logic
+      isAllDay: data['isAllDay'] ?? false,
       frequency: Frequency(type: frequencyStr, unit: '', interval: 1, byDay: byDay),
-      reminder: null, // Adjust as needed
+      reminder: null,
     );
   }
 
-  // Helper method to convert a weekday number to a two-letter abbreviation
   static String _getDayAbbreviation(int weekday) {
     return switch (weekday) {
       DateTime.monday => 'MO',
@@ -80,13 +85,18 @@ class CalendarEvent {
       DateTime.friday => 'FR',
       DateTime.saturday => 'SA',
       DateTime.sunday => 'SU',
-      _ => 'MO', // Default to Monday if something goes wrong
+      _ => 'MO',
     };
   }
 
-
-
   static DateTime _parseDateTime(String dateStr, String timeStr) {
+    // Debug: Check input strings
+
+    if (dateStr.isEmpty || timeStr.isEmpty) {
+      // Handle empty date or time strings
+
+      return DateTime.now();
+    }
     try {
       final date = DateFormat('M/d/yyyy').parse(dateStr);
       final time = DateFormat('h:mm a').parse(timeStr);
@@ -98,6 +108,8 @@ class CalendarEvent {
         time.minute,
       );
     } catch (e) {
+      // Handle parsing errors
+
       return DateTime.now();
     }
   }
@@ -120,13 +132,13 @@ class Frequency {
   final String type;
   final String unit;
   final int interval;
-  final String? byDay; // Add this to specify the day of the week for weekly recurrences
+  final String? byDay;
 
   Frequency({
     required this.type,
     required this.unit,
     required this.interval,
-    this.byDay, // Optional parameter for weekly recurrences
+    this.byDay,
   });
 
   String? get recurrenceRule {
@@ -139,10 +151,9 @@ class Frequency {
       'custom' => unit.toUpperCase(),
       _ => null,
     };
-    //return freq != null ? 'FREQ=$freq;INTERVAL=$interval' : null;
+
     if (freq == null) return null;
 
-    // For weekly recurrences, include the BYDAY field if provided
     if (freq == 'WEEKLY' && byDay != null) {
       return 'FREQ=$freq;INTERVAL=$interval;BYDAY=$byDay';
     }
@@ -163,29 +174,42 @@ class Reminder {
 
 class AppointmentDataSource extends CalendarDataSource {
   AppointmentDataSource(List<CalendarEvent> source) {
-    appointments = source;
+    appointments = source.map((event) {
+      final appointment = Appointment(
+        startTime: event.from,
+        endTime: event.to,
+        subject: event.title,
+        color: event.background,
+        isAllDay: event.isAllDay,
+        recurrenceRule: event.frequency.recurrenceRule,
+        notes: 'Category: ${event.category}',
+      );
+      // Debug: Print the Appointment details.
+
+      return appointment;
+    }).toList();
   }
 
   @override
-  DateTime getStartTime(int index) => appointments![index].from;
+  DateTime getStartTime(int index) => appointments![index].startTime;
 
   @override
-  DateTime getEndTime(int index) => appointments![index].to;
+  DateTime getEndTime(int index) => appointments![index].endTime;
 
   @override
-  String getSubject(int index) => appointments![index].title;
+  String getSubject(int index) => appointments![index].subject;
 
   @override
-  Color getColor(int index) => appointments![index].background;
+  Color getColor(int index) => appointments![index].color;
 
   @override
   bool isAllDay(int index) => appointments![index].isAllDay;
 
   @override
-  String? getRecurrenceRule(int index) => appointments![index].frequency.recurrenceRule;
+  String? getRecurrenceRule(int index) => appointments![index].recurrenceRule;
 
   @override
-  String getNotes(int index) => 'Category: ${appointments![index].category}';
+  String? getNotes(int index) => appointments![index].notes;
 }
 
 class CalendarScreen extends StatefulWidget {
@@ -223,7 +247,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _fetchAppointments(DateTime visibleDate) async {
     setState(() => _isLoading = true);
-
     DateTime startDate;
     DateTime endDate;
 
@@ -244,7 +267,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         startDate = DateTime(visibleDate.year, visibleDate.month, 1);
         endDate = DateTime(visibleDate.year, visibleDate.month + 1, 0, 23, 59, 59);
     }
-
+    print('Fetching appointments for date range: $startDate to $endDate'); // Debug
     try {
       final snapshot = await _firestore
           .collection('users')
@@ -255,22 +278,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
           .orderBy('startDate')
           .get();
 
-      final appointments = snapshot.docs.map((doc) => CalendarEvent.fromFirestore(doc)).toList();
+      final calendarEvents = snapshot.docs.map((doc) => CalendarEvent.fromFirestore(doc)).toList();
       setState(() {
-        _events = AppointmentDataSource(appointments);
+        _events = AppointmentDataSource(calendarEvents);
         _isLoading = false;
         _errorMessage = null;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = e is FirebaseException
-            ? e.message ?? 'Firestore error occurred'
-            : 'Failed to load tasks';
+        _errorMessage = e is FirebaseException ? e.message ?? 'Firestore error occurred' : 'Failed to load tasks';
       });
     }
   }
-
 
   void _showEventDetails(CalendarEvent event) {
     showDialog(
@@ -284,10 +304,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             Text('Category: ${event.category}'),
             Text('Start: ${DateFormat('MMM d, y h:mm a').format(event.from)}'),
             Text('End: ${DateFormat('MMM d, y h:mm a').format(event.to)}'),
-            if (event.frequency.type.isNotEmpty)
-              Text('Repeats: ${event.frequency.type}'),
-            if (event.reminder != null)
-              Text('Reminder: ${event.reminder!.value} mins before'),
+            if (event.frequency.type.isNotEmpty) Text('Repeats: ${event.frequency.type}'),
+            if (event.reminder != null) Text('Reminder: ${event.reminder!.value} mins before'),
           ],
         ),
         actions: [
@@ -336,12 +354,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _fetchAppointments(_calendarController.displayDate!);
             }),
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                  value: CalendarView.month, child: Text('Month View')),
-              const PopupMenuItem(
-                  value: CalendarView.week, child: Text('Week View')),
-              const PopupMenuItem(
-                  value: CalendarView.day, child: Text('Day View')),
+              const PopupMenuItem(value: CalendarView.month, child: Text('Month View')),
+              const PopupMenuItem(value: CalendarView.week, child: Text('Week View')),
+              const PopupMenuItem(value: CalendarView.day, child: Text('Day View')),
             ],
           ),
         ],
@@ -360,15 +375,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
       dataSource: _events,
       onTap: (CalendarTapDetails details) {
         if (details.appointments != null && details.appointments!.isNotEmpty) {
-          final CalendarEvent event = details.appointments!.first;
-          _showEventDetails(event);
+          final Appointment appointment = details.appointments!.first;
+          _showEventDetails(CalendarEvent( // Use CalendarEvent to show details.
+            id: '',
+            title: appointment.subject,
+            category: appointment.notes?.split('Category: ').last ?? 'General',
+            fromTimestamp: Timestamp.fromDate(appointment.startTime),
+            toTimestamp: Timestamp.fromDate(appointment.endTime),
+            frequency: Frequency(type: appointment.recurrenceRule ?? '', unit: '', interval: 1),
+            from: appointment.startTime,
+            to: appointment.endTime,
+            background: appointment.color,
+            isAllDay: appointment.isAllDay,
+          ));
         }
       },
       onViewChanged: (ViewChangedDetails details) {
         if (details.visibleDates.isNotEmpty) {
-          final startDate = details.visibleDates.first;
-          final endDate = details.visibleDates.last;
-          _fetchAppointments(startDate); // Fetch tasks for the entire visible range
+          final firstVisibleDate = details.visibleDates.first;
+          _fetchAppointments(firstVisibleDate);
         }
       },
       headerStyle: const CalendarHeaderStyle(
@@ -379,30 +404,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
         appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
       ),
       scheduleViewSettings: const ScheduleViewSettings(),
-      timeSlotViewSettings: const TimeSlotViewSettings(
+      timeSlotViewSettings: TimeSlotViewSettings(
         startHour: 0,
         endHour: 24,
-        timeFormat: 'h a',
-        timeInterval: Duration(hours: 1),
-        minimumAppointmentDuration: Duration(minutes: 30),
-        dayFormat: 'EEE, MMM d',
-        nonWorkingDays: <int>[DateTime.saturday, DateTime.sunday],
+        timeFormat: 'h:mm a',
+        timeInterval: const Duration(hours: 1),
+        minimumAppointmentDuration: const Duration(minutes: 30),
+        dayFormat: _currentView == CalendarView.week || _currentView == CalendarView.day
+            ? 'EEE, d'
+            : 'EEE, MMM d',
+        nonWorkingDays: const <int>[DateTime.saturday, DateTime.sunday],
       ),
       appointmentBuilder: _buildAppointment,
     );
   }
 
   Widget _buildAppointment(BuildContext context, CalendarAppointmentDetails details) {
-    final appointment = details.appointments.first as Appointment; // Use Appointment type
+    final Appointment appointment = details.appointments.first;
     return Container(
       decoration: BoxDecoration(
-        color: appointment.color, // Use the color from Appointment
+        color: appointment.color,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Center(
         child: _currentView == CalendarView.month
             ? Text(
-          appointment.subject, // Use the subject from Appointment
+          appointment.subject,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: Colors.white, fontSize: 10),
         )
@@ -410,12 +437,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              appointment.notes?.split('Category: ').last ?? 'General', // Extract category from notes
+              appointment.notes?.split('Category: ').last ?? 'General',
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
             const SizedBox(height: 2),
             Text(
-              appointment.subject, // Use the subject from Appointment
+              appointment.subject,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
@@ -435,14 +462,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Text(_errorMessage!, textAlign: TextAlign.center),
           const SizedBox(height: 16),
           ElevatedButton(
-              onPressed: () {
-                if (_calendarController.displayDate != null) {
-                  _fetchAppointments(_calendarController.displayDate!);
-                }
-              },
-              child: const Text('Retry')),
+            onPressed: () {
+              if (_calendarController.displayDate != null) {
+                _fetchAppointments(_calendarController.displayDate!);
+              }
+            },
+            child: const Text('Retry'),
+          ),
         ],
       ),
     );
   }
 }
+
