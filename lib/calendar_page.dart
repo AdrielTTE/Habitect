@@ -271,6 +271,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+
   void _showEventDetails(CalendarEvent event) {
     showDialog(
       context: context,
@@ -365,8 +366,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       },
       onViewChanged: (ViewChangedDetails details) {
         if (details.visibleDates.isNotEmpty) {
-          final firstVisibleDate = details.visibleDates.first;
-          _fetchAppointments(firstVisibleDate);
+          final startDate = details.visibleDates.first;
+          final endDate = details.visibleDates.last;
+          _fetchAppointments(startDate); // Fetch tasks for the entire visible range
         }
       },
       headerStyle: const CalendarHeaderStyle(
