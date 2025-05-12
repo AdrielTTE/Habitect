@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
-import 'constants.dart';
+import 'package:intl/intl.dart';
 import 'edit_screen.dart';
 import 'firestor.dart';
+import 'constants.dart';
 import 'notes_model.dart';
 
-class Task_Widget extends StatefulWidget {
-  Note _note;
-  Task_Widget(this._note, {super.key});
+class TaskWidget extends StatefulWidget {
+  final Note note;
+  TaskWidget(this.note, {Key? key}) : super(key: key);
 
   @override
-  State<Task_Widget> createState() => _Task_WidgetState();
+  State<TaskWidget> createState() => _TaskWidgetState();
 }
 
-class _Task_WidgetState extends State<Task_Widget> {
+class _TaskWidgetState extends State<TaskWidget> {
   @override
   Widget build(BuildContext context) {
-    bool isDone = widget._note.isDon;
+    bool isDone = widget.note.isDon;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       child: Container(
@@ -37,10 +39,8 @@ class _Task_WidgetState extends State<Task_Widget> {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Row(
             children: [
-              // image
-              imageee(),
+              _buildImage(),
               SizedBox(width: 25),
-              // title and subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,7 +50,7 @@ class _Task_WidgetState extends State<Task_Widget> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          widget._note.title,
+                          widget.note.title,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -61,23 +61,31 @@ class _Task_WidgetState extends State<Task_Widget> {
                           value: isDone,
                           onChanged: (value) {
                             setState(() {
-                              isDone = !isDone;
+                              isDone = value!;
+                              if (isDone) {
+                                widget.note.time = DateFormat('hh:mm a')
+                                    .format(DateTime.now());
+                              }
                             });
-                            Firestore_Datasource()
-                                .isdone(widget._note.id, isDone);
+                            Firestore_Datasource().updateTaskStatusAndTime(
+                              widget.note.id,
+                              isDone,
+                              widget.note.time,
+                            );
                           },
-                        )
+                        ),
                       ],
                     ),
                     Text(
-                      widget._note.subtitle,
+                      widget.note.subtitle,
                       style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.grey.shade400),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey.shade400,
+                      ),
                     ),
                     Spacer(),
-                    edit_time()
+                    _buildActionsRow(),
                   ],
                 ),
               ),
@@ -88,31 +96,60 @@ class _Task_WidgetState extends State<Task_Widget> {
     );
   }
 
-  Widget edit_time() {
+  Widget _buildActionsRow() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
+          // —– TIME PILL —–
           Container(
-            width: 90,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             height: 28,
             decoration: BoxDecoration(
               color: custom_green,
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset('assets/images/icon_time.png'),
+                SizedBox(width: 10),
+                Text(
+                  widget.note.time,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(width: 20),
+
+          // —– EDIT PILL —–
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => Edit_Screen(widget.note)),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              height: 28,
+              decoration: BoxDecoration(
+                color: Color(0xffE2F6F1),
+                borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Image.asset('assets/images/icon_time.png'),
+                  Image.asset('assets/images/icon_edit.png'),
                   SizedBox(width: 10),
                   Text(
-                    widget._note.time,
+                    'edit',
                     style: TextStyle(
-                      color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -121,54 +158,19 @@ class _Task_WidgetState extends State<Task_Widget> {
               ),
             ),
           ),
-          SizedBox(width: 20),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => Edit_Screen(widget._note),
-              ));
-            },
-            child: Container(
-              width: 90,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Color(0xffE2F6F1),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                child: Row(
-                  children: [
-                    Image.asset('assets/images/icon_edit.png'),
-                    SizedBox(width: 10),
-                    Text(
-                      'edit',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget imageee() {
+  Widget _buildImage() {
     return Container(
       height: 130,
       width: 100,
       decoration: BoxDecoration(
         color: Colors.white,
         image: DecorationImage(
-          image: AssetImage('assets/images/${widget._note.image}.png'),
+          image: AssetImage('assets/images/${widget.note.image}.png'),
           fit: BoxFit.cover,
         ),
       ),
