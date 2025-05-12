@@ -90,16 +90,33 @@ class CalendarEvent {
   }
 
   static DateTime _parseDateTime(String dateStr, String timeStr) {
-    // Debug: Check input strings
-
     if (dateStr.isEmpty || timeStr.isEmpty) {
-      // Handle empty date or time strings
-
-      return DateTime.now();
+      print('Error: Empty dateStr ($dateStr) or timeStr ($timeStr)');
+      return DateTime.now(); // Consider a better fallback, e.g., a default date
     }
     try {
-      final date = DateFormat('M/d/yyyy').parse(dateStr);
-      final time = DateFormat('h:mm a').parse(timeStr);
+      // Try parsing date in multiple formats
+      DateTime date;
+      try {
+        date = DateFormat('M/d/yyyy').parse(dateStr);
+      } catch (e) {
+        // Try alternative date formats
+        try {
+          date = DateFormat('yyyy-MM-dd').parse(dateStr);
+        } catch (e) {
+          date = DateFormat('MMMM d, yyyy').parse(dateStr);
+        }
+      }
+
+      // Try parsing time in multiple formats
+      DateTime time;
+      try {
+        time = DateFormat('h:mm a').parse(timeStr);
+      } catch (e) {
+        // Try 24-hour format
+        time = DateFormat('HH:mm').parse(timeStr);
+      }
+
       return DateTime(
         date.year,
         date.month,
@@ -108,9 +125,8 @@ class CalendarEvent {
         time.minute,
       );
     } catch (e) {
-      // Handle parsing errors
-
-      return DateTime.now();
+      print('Error parsing dateStr ($dateStr) or timeStr ($timeStr): $e');
+      return DateTime.now(); // Consider a better fallback
     }
   }
 
@@ -407,7 +423,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       timeSlotViewSettings: TimeSlotViewSettings(
         startHour: 0,
         endHour: 24,
-        timeFormat: 'h:mm a',
+        timeFormat: 'h a',
         timeInterval: const Duration(hours: 1),
         minimumAppointmentDuration: const Duration(minutes: 30),
         dayFormat: _currentView == CalendarView.week || _currentView == CalendarView.day
@@ -474,4 +490,3 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 }
-
